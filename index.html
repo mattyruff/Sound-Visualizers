@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resonance — Gong Visualizers</title>
+<style>
+  :root{
+    --void:#040605; --ink:#e9dcc0; --muted:#8a7f63;
+    --gold:#f5c542; --gold-pale:#ffe9a8; --gold-deep:#7a5a18;
+    --emer:#1ea06a; --line:rgba(245,197,66,.18); --glass:rgba(12,10,5,.5);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{min-height:100%}
+  body{background:var(--void);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;
+    -webkit-font-smoothing:antialiased;min-height:100vh;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;padding:6vh 5vw;gap:3.2rem;position:relative;overflow-x:hidden}
+  body::before{content:"";position:fixed;inset:0;z-index:-1;
+    background:radial-gradient(60% 50% at 50% 38%,#13100640 0%,#040605 70%)}
+
+  header{text-align:center;display:flex;flex-direction:column;align-items:center;gap:1rem}
+  .glyph{width:64px;height:64px;opacity:.9}
+  h1{font-weight:300;font-size:clamp(1.5rem,4vw,2.1rem);letter-spacing:.4em;text-transform:uppercase;
+    color:var(--gold-pale);padding-left:.4em}
+  header p{color:var(--muted);font-size:.85rem;letter-spacing:.06em;max-width:42ch;line-height:1.8}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.4rem;width:100%;max-width:760px}
+  a.card{position:relative;text-decoration:none;color:inherit;display:flex;flex-direction:column;align-items:center;
+    gap:1.1rem;padding:2.2rem 1.6rem;border:1px solid var(--line);border-radius:20px;background:var(--glass);
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:.22s ease;overflow:hidden}
+  a.card:hover{border-color:var(--gold-deep);transform:translateY(-3px);background:rgba(245,197,66,.05)}
+  a.card .preview{width:120px;height:120px}
+  a.card h2{font-weight:400;font-size:1.15rem;letter-spacing:.22em;text-transform:uppercase;color:var(--gold)}
+  a.card p{color:var(--muted);font-size:.78rem;letter-spacing:.04em;text-align:center;line-height:1.7}
+  a.card .enter{margin-top:.2rem;font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold-pale);
+    opacity:.65;transition:.2s}
+  a.card:hover .enter{opacity:1}
+
+  footer{color:var(--muted);font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;opacity:.6;text-align:center}
+
+  /* spin the preview glyphs gently */
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .preview .rot{transform-origin:60px 60px;animation:spin 36s linear infinite}
+  a.card:nth-child(2) .preview .rot{animation-duration:48s;animation-direction:reverse}
+</style>
+</head>
+<body>
+
+<header>
+  <svg class="glyph" viewBox="0 0 64 64" fill="none" stroke="var(--gold)" stroke-width="1.2">
+    <circle cx="32" cy="32" r="11"/><circle cx="32" cy="21" r="11"/><circle cx="32" cy="43" r="11"/>
+    <circle cx="22.5" cy="26.5" r="11"/><circle cx="41.5" cy="26.5" r="11"/>
+    <circle cx="22.5" cy="37.5" r="11"/><circle cx="41.5" cy="37.5" r="11"/>
+  </svg>
+  <h1>Resonance</h1>
+  <p>Sacred geometry that rings with your gong. Choose a form, then play a recording or open the live mic.</p>
+</header>
+
+<nav class="grid">
+  <a class="card" href="aurum.html">
+    <svg class="preview" viewBox="0 0 120 120" fill="none" stroke="var(--gold)" stroke-width="1">
+      <g class="rot" opacity="0.9">
+        <circle cx="60" cy="60" r="20"/><circle cx="60" cy="40" r="20"/><circle cx="60" cy="80" r="20"/>
+        <circle cx="42.7" cy="50" r="20"/><circle cx="77.3" cy="50" r="20"/>
+        <circle cx="42.7" cy="70" r="20"/><circle cx="77.3" cy="70" r="20"/>
+      </g>
+    </svg>
+    <h2>Aurum</h2>
+    <p>The Seed of Life in gold, breathing violet from its core. Sacred geometry that blooms on every strike.</p>
+    <span class="enter">Enter →</span>
+  </a>
+
+  <a class="card" href="torus.html">
+    <svg class="preview" viewBox="0 0 120 120" fill="none" stroke="var(--gold)" stroke-width="0.8">
+      <circle cx="60" cy="60" r="40" stroke="var(--emer)" stroke-width="1.4" opacity="0.5"/>
+      <g class="rot">
+        <ellipse cx="60" cy="60" rx="40" ry="14"/><ellipse cx="60" cy="60" rx="40" ry="14" transform="rotate(30 60 60)"/>
+        <ellipse cx="60" cy="60" rx="40" ry="14" transform="rotate(60 60 60)"/><ellipse cx="60" cy="60" rx="40" ry="14" transform="rotate(90 60 60)"/>
+        <ellipse cx="60" cy="60" rx="40" ry="14" transform="rotate(120 60 60)"/><ellipse cx="60" cy="60" rx="40" ry="14" transform="rotate(150 60 60)"/>
+      </g>
+    </svg>
+    <h2>Torus</h2>
+    <p>A woven torus seen down its axis, gold windings over a deep emerald core, turning in slow steady silence.</p>
+    <span class="enter">Enter →</span>
+  </a>
+</nav>
+
+<footer>Best with headphones or a good speaker · Tap a form to begin</footer>
+
+</body>
+</html>

@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Aurum — Seed of Life</title>
+<style>
+  :root{
+    --void:#050403; --ink:#e9d9a6; --muted:#8a7642;
+    --gold:#f5c542; --gold-pale:#ffe9a8; --gold-deep:#7a5a18;
+    --line:rgba(245,197,66,.20); --glass:rgba(12,9,4,.55);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:var(--void);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;-webkit-font-smoothing:antialiased}
+  canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+
+  #veil{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:1.5rem;background:radial-gradient(120% 90% at 50% 42%,#16100330 0%,#050403 72%);z-index:30;transition:opacity .6s ease}
+  #veil.gone{opacity:0;pointer-events:none}
+  #veil h1{font-weight:300;font-size:1.5rem;letter-spacing:.42em;text-transform:uppercase;
+    color:var(--gold-pale);padding-left:.42em}
+  #veil p{color:var(--muted);font-size:.84rem;letter-spacing:.05em;max-width:32ch;text-align:center;line-height:1.8}
+  .cta{display:flex;gap:.7rem;margin-top:.3rem;flex-wrap:wrap;justify-content:center}
+  button.b{appearance:none;border:1px solid var(--gold-deep);background:transparent;color:var(--gold);
+    font:inherit;font-size:.78rem;letter-spacing:.1em;padding:.62rem 1.3rem;border-radius:999px;cursor:pointer;
+    transition:.18s;text-transform:uppercase}
+  button.b:hover{border-color:var(--gold);background:rgba(245,197,66,.08);color:var(--gold-pale)}
+  button.b.solid{background:var(--gold);color:#1a1206;border-color:var(--gold)}
+  button.b.solid:hover{background:var(--gold-pale)}
+
+  #dock{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);display:flex;align-items:center;gap:14px;
+    padding:10px 16px;background:var(--glass);border:1px solid var(--line);border-radius:16px;
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);z-index:20;transition:opacity .4s ease;max-width:94vw}
+  #dock.hide{opacity:0;pointer-events:none}
+  .ic{width:40px;height:40px;border-radius:11px;border:1px solid transparent;background:transparent;color:var(--ink);
+    cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+  .ic:hover{background:rgba(245,197,66,.1);border-color:var(--line)}
+  .ic.active{color:var(--gold);border-color:var(--gold-deep);background:rgba(245,197,66,.08)}
+  .ic svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  .sep{width:1px;height:26px;background:var(--line)}
+  .ctl{display:flex;align-items:center;gap:8px}
+  .ctl label{font-size:.64rem;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;white-space:nowrap}
+  input[type=range]{-webkit-appearance:none;width:76px;height:3px;border-radius:3px;background:var(--gold-deep);outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--gold);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:13px;height:13px;border:none;border-radius:50%;background:var(--gold);cursor:pointer}
+
+  #hud{position:fixed;top:18px;left:18px;z-index:20;font-size:.68rem;letter-spacing:.12em;color:var(--muted);
+    line-height:2;text-transform:uppercase;transition:opacity .4s ease}
+  #hud.hide{opacity:0}
+  #hud b{color:var(--gold);font-weight:400}
+  #hud .meter{width:120px;height:2px;background:rgba(245,197,66,.16);margin-top:7px;overflow:hidden}
+  #hud .meter i{display:block;height:100%;width:0;background:var(--gold)}
+
+  #nav{position:fixed;top:16px;right:16px;z-index:40;display:flex;align-items:center;gap:3px;padding:5px;
+    background:var(--glass);border:1px solid var(--line);border-radius:12px;
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);transition:opacity .4s ease}
+  #nav.hide{opacity:0;pointer-events:none}
+  #nav a{font:inherit;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;
+    color:var(--muted);padding:.42rem .8rem;border-radius:8px;transition:.15s}
+  #nav a:hover{color:var(--gold-pale);background:rgba(245,197,66,.08)}
+  #nav a.active{color:var(--gold);background:rgba(245,197,66,.12)}
+  #nav a.home{font-size:1rem;line-height:1;padding:.35rem .58rem;color:var(--gold)}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="nav">
+  <a href="index.html" class="home" title="Menu" aria-label="Menu">≡</a>
+  <a href="aurum.html" class="active">Aurum</a>
+  <a href="torus.html">Torus</a>
+</div>
+
+<div id="hud" class="hide">
+  <div>seed of life</div>
+  <div>circles <b id="hCirc">7</b></div>
+  <div>centroid <b id="hHz">—</b></div>
+  <div class="meter"><i id="hLvl"></i></div>
+</div>
+
+<div id="veil">
+  <h1>Aurum</h1>
+  <p>Sacred geometry that rings with your gong. Load a recording, or play live and watch the seed of life bloom in gold.</p>
+  <div class="cta">
+    <button class="b solid" id="vFile">Load audio</button>
+    <button class="b" id="vMic">Use live mic</button>
+  </div>
+  <p style="font-size:.7rem;opacity:.7">or drop an audio file anywhere</p>
+</div>
+
+<div id="dock" class="hide">
+  <button class="ic" id="dPlay" title="Play / pause" aria-label="Play or pause">
+    <svg id="dPlayIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+  </button>
+  <button class="ic" id="dFile" title="Load audio file" aria-label="Load audio file">
+    <svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M9 9l3 3 3-3"/><path d="M12 12V5"/></svg>
+  </button>
+  <button class="ic" id="dMic" title="Live microphone" aria-label="Live microphone">
+    <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg>
+  </button>
+  <div class="sep"></div>
+  <div class="ctl"><label>React</label><input type="range" id="react" min="0.3" max="2.5" step="0.05" value="1.1"></div>
+  <div class="ctl"><label>Glow</label><input type="range" id="glow" min="0.4" max="6" step="0.1" value="1"></div>
+  <div class="ctl"><label>Spin</label><input type="range" id="spin" min="0" max="2" step="0.05" value="1"></div>
+  <div class="sep"></div>
+  <button class="ic" id="dFull" title="Fullscreen" aria-label="Fullscreen">
+    <svg viewBox="0 0 24 24"><path d="M4 9V4h5"/><path d="M20 9V4h-5"/><path d="M4 15v5h5"/><path d="M20 15v5h-5"/></svg>
+  </button>
+</div>
+
+<input type="file" id="filePick" accept="audio/*,.m4a,.aac,.mp3,.wav,.caf,.aiff" hidden>
+
+<script>
+(()=>{
+"use strict";
+const TAU=Math.PI*2;
+const clamp=(v,a,b)=>v<a?a:(v>b?b:v);
+const cvs=document.getElementById('c'), ctx=cvs.getContext('2d');
+let W=0,H=0,cx=0,cy=0,R0=0,DPR=Math.min(2,window.devicePixelRatio||1);
+
+// ---------- audio (proven pipeline) ----------
+let actx=null, analyser=null, srcNode=null, micStream=null;
+let freqBytes=null, timeBytes=null, binHz=0;
+let buf=null, bufNode=null, filePlaying=false, pauseOffset=0, startedAt=0;
+let mode='idle';
+
+function ensureCtx(){
+  if(actx) return;
+  actx=new (window.AudioContext||window.webkitAudioContext)();
+  analyser=actx.createAnalyser();
+  analyser.fftSize=4096; analyser.smoothingTimeConstant=0.6;
+  freqBytes=new Uint8Array(analyser.frequencyBinCount);
+  timeBytes=new Uint8Array(analyser.fftSize);
+  binHz=actx.sampleRate/analyser.fftSize;
+}
+function startBuf(){
+  if(!buf) return;
+  bufNode=actx.createBufferSource(); bufNode.buffer=buf; bufNode.loop=true;
+  bufNode.connect(analyser); analyser.connect(actx.destination);
+  bufNode.start(0, pauseOffset % buf.duration);
+  startedAt=actx.currentTime; filePlaying=true;
+}
+function stopBuf(){
+  if(bufNode){ try{bufNode.stop();}catch(e){} try{bufNode.disconnect();}catch(e){} bufNode=null; }
+  if(filePlaying){ pauseOffset += actx.currentTime - startedAt; filePlaying=false; }
+}
+function disconnectSrc(){
+  stopBuf();
+  if(srcNode){ try{srcNode.disconnect();}catch(e){} srcNode=null; }
+  if(micStream){ micStream.getTracks().forEach(t=>t.stop()); micStream=null; }
+}
+function decode(arr){
+  return new Promise((res,rej)=>{
+    let done=false; const ok=b=>{if(!done){done=true;res(b);}}, no=e=>{if(!done){done=true;rej(e||0);}};
+    const p=actx.decodeAudioData(arr, ok, no); if(p&&p.then) p.then(ok,no);
+  });
+}
+async function useFile(file){
+  try{
+    ensureCtx(); await actx.resume(); disconnectSrc(); mode='file';
+    buf=await decode(await file.arrayBuffer()); pauseOffset=0; startBuf();
+    reveal(); syncPlay();
+  }catch(err){ console.error(err); alert('Could not decode "'+file.name+'".\nTry MP3, M4A/AAC, WAV, OGG, FLAC.'); }
+}
+async function useMic(){
+  ensureCtx(); await actx.resume(); disconnectSrc(); mode='mic';
+  try{ micStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}}); }
+  catch(e){ alert('Mic unavailable — check browser permissions.'); return; }
+  srcNode=actx.createMediaStreamSource(micStream); srcNode.connect(analyser);
+  reveal(); syncPlay();
+}
+function syncPlay(){
+  const playing = mode==='mic' || (mode==='file' && filePlaying);
+  document.getElementById('dPlayIcon').setAttribute('d', playing?'M9 5v14M15 5v14':'M8 5v14l11-7z');
+  document.getElementById('dMic').classList.toggle('active',mode==='mic');
+}
+
+// ---------- features ----------
+const feat={level:0,centroid:600,low:0,mid:0,high:0,kick:0,prevLvl:0,bloom:0};
+function analyze(){
+  if(!analyser){ feat.level=0; feat.kick*=0.9; return; }
+  analyser.getByteFrequencyData(freqBytes);
+  analyser.getByteTimeDomainData(timeBytes);
+  let s=0; for(let i=0;i<timeBytes.length;i++){const v=(timeBytes[i]-128)/128;s+=v*v;}
+  const lvl=Math.sqrt(s/timeBytes.length);
+  let num=0,den=0,low=0,mid=0,high=0;
+  const i0=Math.max(1,(30/binHz)|0), i1=Math.min(freqBytes.length,(8000/binHz)|0);
+  const sLo=(250/binHz)|0, sHi=(2000/binHz)|0;
+  for(let i=i0;i<i1;i++){
+    const m=freqBytes[i]/255, f=i*binHz; num+=f*m; den+=m;
+    if(i<sLo) low+=m; else if(i<sHi) mid+=m; else high+=m;
+  }
+  const centroid = den>0.001 ? num/den : feat.centroid;
+  const rise=lvl-feat.prevLvl;
+  if(rise>0.04 && lvl>0.05) feat.kick=Math.min(1.8,feat.kick+rise*8);
+  feat.kick*=0.92; feat.prevLvl=feat.prevLvl*0.6+lvl*0.4;
+  feat.level+=(lvl-feat.level)*0.22;
+  feat.low+=(low*0.02-feat.low)*0.18; feat.mid+=(mid*0.012-feat.mid)*0.12; feat.high+=(high*0.01-feat.high)*0.2;
+  feat.centroid+=(centroid-feat.centroid)*0.07;
+  const bl=clamp((Math.log(feat.centroid)-Math.log(150))/(Math.log(4000)-Math.log(150)),0,1);
+  feat.bloom+=(bl-feat.bloom)*0.04;
+}
+
+// ---------- Seed of Life lattice (triangular; grows toward Flower of Life) ----------
+let lattice=[];                              // {dx,dy,dist} unit centers (×R), sorted by dist
+function buildLattice(){
+  lattice=[]; const ax=1, ay=0, bx=0.5, by=Math.sqrt(3)/2;
+  for(let i=-4;i<=4;i++)for(let j=-4;j<=4;j++){
+    const dx=i*ax+j*bx, dy=i*ay+j*by, dist=Math.hypot(dx,dy);
+    if(dist<3.2) lattice.push({dx,dy,dist});
+  }
+  lattice.sort((p,q)=>p.dist-q.dist);
+}
+buildLattice();
+
+// ---------- render ----------
+let rot=0, act=0, waves=[], last=0, violetEnv=0, breaths=[];
+const sparks=[]; for(let i=0;i<18;i++) sparks.push({a:Math.random()*TAU,sp:0.2+Math.random()*0.5,tw:Math.random()*TAU});
+
+function circleGlow(x,y,r,alpha,g){
+  ctx.shadowColor='#f5c542'; ctx.shadowBlur=16*g;
+  ctx.strokeStyle='rgba(201,152,47,'+(0.45*alpha)+')'; ctx.lineWidth=2.4*DPR;
+  ctx.beginPath(); ctx.arc(x,y,r,0,TAU); ctx.stroke();
+  ctx.shadowBlur=7*g;
+  ctx.strokeStyle='rgba(255,233,168,'+(0.92*alpha)+')'; ctx.lineWidth=1.1*DPR;
+  ctx.beginPath(); ctx.arc(x,y,r,0,TAU); ctx.stroke();
+}
+function drawSeed(R, reach, alphaMul, g){
+  let n=0;
+  for(const p of lattice){
+    if(p.dist > reach+0.6) continue;
+    const a = clamp(reach+0.6 - p.dist, 0, 1) * (0.35+0.65*act) * alphaMul;
+    if(a<=0.01) continue;
+    circleGlow(p.dx*R, p.dy*R, R, a, g); n++;
+  }
+  return n;
+}
+
+function draw(t){
+  const dt=Math.min(0.05,(t-last)/1000||0); last=t;
+  const live=(mode==='mic')||(mode==='file'&&filePlaying);
+  act+=((live?1:0)-act)*0.02;
+
+  const react=parseFloat(reactEl.value), g=parseFloat(glowEl.value)*(0.55+0.6*act), spin=parseFloat(spinEl.value);
+  rot+=(0.012 + feat.mid*0.4*react)*dt*spin*(0.3+act);
+
+  // void
+  ctx.globalCompositeOperation='source-over';
+  ctx.fillStyle='#050403'; ctx.fillRect(0,0,W,H);
+  ctx.globalCompositeOperation='lighter';
+
+  // ---- violet breath (BEHIND the gold): exhale outward on a strike, inhale back to centre ----
+  // ambient residual that lingers and fades with the gong's decay
+  const vTarget = feat.kick*1.0 + feat.level*0.26;
+  violetEnv += (vTarget-violetEnv) * (vTarget>violetEnv ? 0.4 : 0.02);
+  const bi=clamp(violetEnv,0,1)*react;
+  const baseR=R0*(2.2+violetEnv*1.2);
+  const bg=ctx.createRadialGradient(cx,cy,0,cx,cy,baseR);
+  bg.addColorStop(0,'rgba(128,82,238,'+(0.14*bi)+')'); bg.addColorStop(1,'rgba(70,30,150,0)');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+  // each strike spawns a slow breath: radius 0->peak->0; colour lighter(soft)->darker(heavy); lingers longer when heavy
+  const edge=Math.hypot(W,H)*0.5;            // reach the screen corners on the biggest strikes
+  if(feat.kick>0.5 && (!breaths.length || breaths[breaths.length-1].age>0.45)){
+    const strength=clamp(feat.kick/1.8,0,1);
+    // pale lavender (soft) -> deep saturated violet (heavy)
+    const cr=Math.round(192+(90-192)*strength), cg=Math.round(162+(38-162)*strength), cb=Math.round(255+(178-255)*strength);
+    breaths.push({age:0, dur:3.0+strength*5.5, strength, peak:R0*2.2+strength*edge*1.05, cr,cg,cb});
+    if(breaths.length>5) breaths.shift();
+  }
+  for(let i=breaths.length-1;i>=0;i--){
+    const b=breaths[i]; b.age+=dt;
+    const p=b.age/b.dur;
+    if(p>=1){ breaths.splice(i,1); continue; }
+    const env=Math.sin(p*Math.PI);           // 0 ->1 ->0 : expand then contract
+    const rad=Math.max(2,b.peak*env);
+    const a=(0.11+0.20*b.strength)*env*react;
+    const c=b.cr+','+b.cg+','+b.cb;
+    const rg=ctx.createRadialGradient(cx,cy,0,cx,cy,rad);
+    rg.addColorStop(0,   'rgba('+c+','+a+')');
+    rg.addColorStop(0.62,'rgba('+c+','+(a*0.5)+')');
+    rg.addColorStop(1,   'rgba('+c+',0)');
+    ctx.fillStyle=rg; ctx.fillRect(0,0,W,H);
+  }
+
+  // ---- gold center haze ----
+  const hz=ctx.createRadialGradient(cx,cy,0,cx,cy,R0*3.2);
+  const ha=(0.04+0.22*feat.level*react)*act+0.02;
+  hz.addColorStop(0,'rgba(245,197,66,'+ha+')'); hz.addColorStop(1,'rgba(245,197,66,0)');
+  ctx.fillStyle=hz; ctx.fillRect(0,0,W,H);
+
+  // breathing radius + bloom reach
+  const R=R0*(1 + 0.10*feat.low*react + 0.015*Math.sin(t*0.0011));
+  const reach=1 + feat.bloom*react*1.9 + feat.kick*0.4;   // how far the flower extends (×R)
+
+  // ---- single rotating plane ----
+  let drawn=0;
+  ctx.save(); ctx.translate(cx,cy); ctx.rotate(rot);
+  drawn=drawSeed(R, reach, 1.0, g);
+  ctx.restore();
+
+  // strike waves — light expanding through the geometry
+  if(feat.kick>0.5 && (!waves.length || waves[waves.length-1].r>R*0.25))
+    waves.push({r:R*0.2, v:R*(2.4+feat.kick), life:1});
+  ctx.shadowBlur=12*g; ctx.shadowColor='#ffe9a8';
+  for(let i=waves.length-1;i>=0;i--){
+    const w=waves[i]; w.r+=w.v*dt; w.life-=dt*0.8;
+    if(w.life<=0){ waves.splice(i,1); continue; }
+    ctx.strokeStyle='rgba(255,233,168,'+(0.5*w.life)+')'; ctx.lineWidth=1.4*DPR;
+    ctx.beginPath(); ctx.arc(cx,cy,w.r,0,TAU); ctx.stroke();
+  }
+
+  // orbiting sparks (6-fold), twinkle with shimmer
+  const sr=R*(1.62+0.1*feat.low);
+  ctx.shadowBlur=8*g; ctx.shadowColor='#f5c542';
+  for(const s of sparks){
+    s.a+=s.sp*dt*spin*(0.4+act); s.tw+=dt*4;
+    const tw=(0.5+0.5*Math.sin(s.tw))*(0.3+feat.high*react*3)*act;
+    if(tw<0.02) continue;
+    for(let k=0;k<6;k++){
+      const ang=s.a+k*TAU/6+rot, x=cx+Math.cos(ang)*sr, y=cy+Math.sin(ang)*sr;
+      ctx.fillStyle='rgba(255,233,168,'+clamp(tw,0,0.9)+')';
+      ctx.beginPath(); ctx.arc(x,y,1.8*DPR,0,TAU); ctx.fill();
+    }
+  }
+
+  ctx.shadowBlur=0;
+  if(t-hudT>140){ updateHUD(drawn); hudT=t; }
+  requestAnimationFrame(draw);
+}
+let hudT=0;
+function updateHUD(circ){
+  hCirc.textContent=circ; hHz.textContent=Math.round(feat.centroid)+' Hz';
+  hLvl.style.width=Math.min(100,feat.level*200)+'%';
+}
+
+function loopFeat(){ analyze(); setTimeout(loopFeat,1000/60); }
+
+// ---------- layout ----------
+function resize(){
+  W=Math.floor(innerWidth*DPR); H=Math.floor(innerHeight*DPR);
+  cvs.width=W; cvs.height=H; cx=W/2; cy=H/2; R0=Math.min(W,H)*0.15;
+}
+addEventListener('resize',resize);
+
+// ---------- UI ----------
+const reactEl=document.getElementById('react'), glowEl=document.getElementById('glow'), spinEl=document.getElementById('spin');
+const hCirc=document.getElementById('hCirc'), hHz=document.getElementById('hHz'), hLvl=document.getElementById('hLvl');
+const veil=document.getElementById('veil'), dock=document.getElementById('dock'), hud=document.getElementById('hud'), nav=document.getElementById('nav');
+const filePick=document.getElementById('filePick');
+function reveal(){ veil.classList.add('gone'); dock.classList.remove('hide'); hud.classList.remove('hide'); poke(); }
+
+document.getElementById('vFile').onclick=()=>filePick.click();
+document.getElementById('dFile').onclick=()=>filePick.click();
+filePick.onchange=e=>{ if(e.target.files[0]) useFile(e.target.files[0]); };
+document.getElementById('vMic').onclick=useMic;
+document.getElementById('dMic').onclick=useMic;
+document.getElementById('dPlay').onclick=()=>{ if(mode==='file'){ filePlaying?stopBuf():startBuf(); } syncPlay(); };
+document.getElementById('dFull').onclick=()=>{ if(!document.fullscreenElement) document.documentElement.requestFullscreen?.(); else document.exitFullscreen?.(); };
+
+['dragover','drop'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault()));
+document.addEventListener('drop',e=>{ const f=[...e.dataTransfer.files].find(f=>f.type.startsWith('audio')); if(f) useFile(f); });
+
+let hideTimer=null;
+function poke(){
+  dock.classList.remove('hide'); hud.classList.remove('hide'); nav.classList.remove('hide'); clearTimeout(hideTimer);
+  hideTimer=setTimeout(()=>{ if(mode==='mic'||(mode==='file'&&filePlaying)){ dock.classList.add('hide'); hud.classList.add('hide'); nav.classList.add('hide'); } },2800);
+}
+['mousemove','touchstart','keydown'].forEach(ev=>addEventListener(ev,poke));
+['touchend','click'].forEach(ev=>addEventListener(ev,()=>{ if(actx&&actx.state==='suspended') actx.resume(); }));
+
+// go
+resize(); loopFeat(); requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>
