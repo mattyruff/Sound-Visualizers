@@ -227,7 +227,8 @@ function analyze(){
 //       col palette index, hero = bright star that gets a cross glint
 const PAL=[
   [255,255,255],[196,214,255],[152,172,255],[178,142,255],
-  [214,152,255],[126,142,236],[236,190,255]
+  [214,152,255],[126,142,236],[236,190,255],
+  [150,255,214],[170,255,190]                    // cyan-green accents
 ];
 const ARMS=9, PITCH=1.9;
 const NSTARS=Math.min(screen.width||1024,screen.height||768)<=820?2600:4200;   // lighter on phones
@@ -278,6 +279,65 @@ function buildDust(){
   }
 }
 
+// nebula: fBm noise clouds prerendered to two pattern-space layers —
+// cool violet field with a magenta heart, warm gold clumps along the arms.
+// they rotate with the galaxy and cross-fade with the pitch temperature.
+let nebCool=null, nebWarm=null, nebS=0;
+function buildNebula(){
+  const S=Math.max(2,Math.ceil(Rg*2.3)), half=Math.ceil(S/2);   // compute at half res, upscale
+  nebS=S;
+  // value-noise fBm
+  const GN=96, grid=new Float32Array(GN*GN);
+  for(let i=0;i<GN*GN;i++) grid[i]=Math.random();
+  const noise=(x,y)=>{
+    const xi=Math.floor(x)%GN, yi=Math.floor(y)%GN, xf=x-Math.floor(x), yf=y-Math.floor(y);
+    const sx=xf*xf*(3-2*xf), sy=yf*yf*(3-2*yf);
+    const g=(a,b)=>grid[((a%GN)+GN)%GN + (((b%GN)+GN)%GN)*GN];
+    return g(xi,yi)*(1-sx)*(1-sy)+g(xi+1,yi)*sx*(1-sy)+g(xi,yi+1)*(1-sx)*sy+g(xi+1,yi+1)*sx*sy;
+  };
+  const fbm=(x,y)=>{
+    let v=0,a=0.5,f=1;
+    for(let o=0;o<4;o++){ v+=a*noise(x*f,y*f); a*=0.5; f*=2.03; }
+    return v;                                   // ~0..0.94
+  };
+  const mk=()=>{ const c=document.createElement('canvas'); c.width=c.height=half; return c; };
+  const cCool=mk(), cWarm=mk();
+  const dC=cCool.getContext('2d'), dW=cWarm.getContext('2d');
+  const imC=dC.createImageData(half,half), imW=dW.createImageData(half,half);
+  const c0=half/2, sc=7.5/half;
+  for(let py=0;py<half;py++)for(let px=0;px<half;px++){
+    const dx=px-c0, dy=py-c0, r=Math.hypot(dx,dy)/(half/2);   // 0 center .. 1 edge of pattern
+    if(r>1.02) continue;
+    const th=Math.atan2(dy,dx);
+    const n=fbm(px*sc+37, py*sc+11);
+    const n2=fbm(px*sc*2.2+91, py*sc*2.2+53);
+    const fall=clamp(1-r*1.05,0,1);                            // radial falloff
+    const i=(py*half+px)*4;
+    // cool: violet field, magenta heart near the core
+    const heart=clamp(1-r*2.6,0,1);
+    let a=Math.pow(clamp(n*1.35-0.24,0,1),1.5)*fall*0.9;
+    imC.data[i  ]=Math.round(128+127*heart+30*n2);
+    imC.data[i+1]=Math.round(52+40*heart);
+    imC.data[i+2]=Math.round(222+33*heart);
+    imC.data[i+3]=Math.round(255*clamp(a+Math.pow(heart,1.6)*0.5*(0.55+0.45*n),0,1));
+    // warm: gold clumps hugging the arms
+    const u=clamp(r,0.06,1);
+    const armPh=(th - PITCH*Math.log(0.06+u))/(TAU/ARMS);
+    const dArm=Math.abs(armPh-Math.round(armPh))*2;            // 0 on-arm .. 1 between
+    const armGlow=Math.pow(clamp(1-dArm,0,1),1.8);
+    let aw=Math.pow(clamp(n2*1.4-0.28,0,1),1.4)*fall*(0.18+0.82*armGlow)*0.95;
+    imW.data[i  ]=255;
+    imW.data[i+1]=Math.round(186+40*n);
+    imW.data[i+2]=Math.round(96+60*n2);
+    imW.data[i+3]=Math.round(255*clamp(aw,0,1));
+  }
+  dC.putImageData(imC,0,0); dW.putImageData(imW,0,0);
+  nebCool=document.createElement('canvas'); nebCool.width=nebCool.height=S;
+  nebCool.getContext('2d').drawImage(cCool,0,0,S,S);           // smooth upscale
+  nebWarm=document.createElement('canvas'); nebWarm.width=nebWarm.height=S;
+  nebWarm.getContext('2d').drawImage(cWarm,0,0,S,S);
+}
+
 // ---------- render ----------
 let rot=0, act=0, waves=[], last=0, coreEnv=0;
 let comets=[], lastComet=-99;
@@ -302,6 +362,15 @@ function draw(t){
   // pitch colour temperature: deep gong -> warm amber, bright shimmer -> cool blue-violet
   const wt=clamp(1-feat.bloom,0,1);
   const tR=148+107*wt, tG=168+40*wt, tB=255-115*wt;
+
+  // ---- nebula clouds: cool violet field + warm gold streamers, cross-fading with pitch ----
+  const nebBase=(0.35+0.65*act)*(0.62+0.38*clamp(feat.level*react*2,0,1))*(1+0.3*clamp(feat.kick,0,1));
+  ctx.save(); ctx.translate(cx,cy); ctx.rotate(rotNow); ctx.scale(breathe,breathe);
+  ctx.globalAlpha=clamp(nebBase*(0.55+0.45*(1-wt)),0,1);
+  ctx.drawImage(nebCool,-nebS/2,-nebS/2);
+  ctx.globalAlpha=clamp(nebBase*(0.35+0.65*wt),0,1);
+  ctx.drawImage(nebWarm,-nebS/2,-nebS/2);
+  ctx.globalAlpha=1; ctx.restore();
 
   // ---- core: white heart flaring on strikes, tinted halo breathing with level ----
   coreEnv += (feat.kick*1.1+feat.level*0.3-coreEnv)*(feat.kick>coreEnv?0.5:0.03);
@@ -403,7 +472,7 @@ function loopFeat(){ analyze(); setTimeout(loopFeat,1000/60); }
 function resize(){
   W=Math.floor(innerWidth*DPR); H=Math.floor(innerHeight*DPR);
   cvs.width=W; cvs.height=H; cx=W/2; cy=H/2; Rg=Math.min(W,H)*0.46;
-  buildDust();
+  buildDust(); buildNebula();
 }
 addEventListener('resize',resize);
 
