@@ -104,7 +104,7 @@
     <svg viewBox="0 0 24 24"><path d="M4 4l3 2m13-2l-3 2"/><circle cx="12" cy="13" r="8"/><circle cx="12" cy="13" r="3"/></svg>
   </button>
   <div class="sep"></div>
-  <div class="ctl"><label>React</label><input type="range" id="react" min="0.3" max="2.5" step="0.05" value="1.1"></div>
+  <div class="ctl"><label>Shine</label><input type="range" id="shine" min="0" max="1" step="0.02" value="0.55"></div>
   <div class="ctl"><label>Weave</label><input type="range" id="weave" min="0.1" max="0.8" step="0.02" value="0.6"></div>
   <div class="ctl"><label>Spin</label><input type="range" id="spin" min="0" max="2" step="0.05" value="1"></div>
   <div class="sep"></div>
@@ -227,9 +227,11 @@ function analyze(){
 let spinAng=0, act=0, last=0, emEnv=0, emStr=0, emPulse=0;
 
 // gold lines drawn onto the ISOLATED layer (gctx). Warm core so the bloom stays golden, not white.
+// past full alpha the surge keeps growing by widening the strokes (lines may merge at max shine)
 function gstrokeG(a){
-  gctx.strokeStyle='rgba(214,168,72,'+(0.42*a)+')'; gctx.lineWidth=2.6*DPR; gctx.stroke();
-  gctx.strokeStyle='rgba(255,226,150,'+(0.95*a)+')'; gctx.lineWidth=1.1*DPR; gctx.stroke();
+  const w=0.7+0.45*Math.min(a,2);
+  gctx.strokeStyle='rgba(214,168,72,'+(0.42*a)+')'; gctx.lineWidth=2.6*DPR*w; gctx.stroke();
+  gctx.strokeStyle='rgba(255,226,150,'+(0.95*a)+')'; gctx.lineWidth=1.1*DPR*w; gctx.stroke();
 }
 
 // torus geometry (head-on, down the axis). r near R closes the hole to a tight central swirl.
@@ -240,7 +242,7 @@ function draw(t){
   const dt=Math.min(0.05,(t-last)/1000||0); last=t;
   const live=(mode==='mic')||(mode==='file'&&filePlaying);
   act+=((live?1:0)-act)*0.02;
-  const react=parseFloat(reactEl.value), g=1,
+  const shine=parseFloat(shineEl.value),
         weave=parseFloat(weaveEl.value), spin=parseFloat(spinEl.value);
 
   spinAng += 0.017*spin*dt*(0.4+0.6*act);
@@ -273,7 +275,9 @@ function draw(t){
   gctx.globalCompositeOperation='lighter';
   const S=plateR/(TR+Tr);
   const shear=weave*(1+0.05*feat.kick);
-  const amp=(0.18+0.82*act)*(0.5+0.8*clamp(feat.level*react,0,1)) + feat.kick*0.3*act;
+  // shine: low = minimal steady glow, high = volume surges the threads (1.5x old peak)
+  const amp=(0.18+0.82*act)*(0.12+0.28*shine + (0.25+1.30*shine)*clamp(feat.level*2.2,0,1))
+            + feat.kick*0.3*act*(0.5+shine);
   for(let fam=0;fam<2;fam++){
     const dir=fam?-1:1, phase=fam?Math.PI/NPET:0;
     for(let i=0;i<NPET;i++){
@@ -293,8 +297,8 @@ function draw(t){
   // ============ LAYER 3 — composite gold as bloom: soft blurred halo + crisp lines ==============
   // soft additive halo (restrained, so it only kisses the emerald near the lines)
   ctx.globalCompositeOperation='lighter';
-  ctx.globalAlpha=clamp(0.30+0.10*g,0,0.7);
-  if(supportsFilter){ ctx.filter='blur('+Math.min(20,(3+2.4*g))+'px)'; ctx.drawImage(gc,0,0); ctx.filter='none'; }
+  ctx.globalAlpha=clamp(0.22+0.33*shine,0,0.7);
+  if(supportsFilter){ ctx.filter='blur('+Math.min(20,(3.5+4.5*shine))+'px)'; ctx.drawImage(gc,0,0); ctx.filter='none'; }
   else { ctx.drawImage(gc,0,0); }
   // crisp colour-true lines on top
   ctx.globalAlpha=1;
@@ -328,7 +332,7 @@ function resize(){
 addEventListener('resize',resize);
 
 // ---------- UI ----------
-const reactEl=document.getElementById('react'),
+const shineEl=document.getElementById('shine'),
       weaveEl=document.getElementById('weave'), spinEl=document.getElementById('spin');
 const hWv=document.getElementById('hWv'), hHz=document.getElementById('hHz'), hLvl=document.getElementById('hLvl');
 const veil=document.getElementById('veil'), dock=document.getElementById('dock'), hud=document.getElementById('hud'), nav=document.getElementById('nav');
