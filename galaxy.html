@@ -3,13 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Torus — Gong</title>
+<title>Galaxy — Spiral</title>
 <style>
   :root{
-    --void:#040605; --ink:#e9d9a6; --muted:#7f8a6a;
+    --void:#040308; --ink:#d9d3e9; --muted:#6f688a;
     --gold:#f5c542; --gold-pale:#ffe9a8; --gold-deep:#7a5a18;
-    --emer:#1ea06a;
-    --line:rgba(245,197,66,.20); --glass:rgba(6,12,9,.55);
+    --line:rgba(245,197,66,.20); --glass:rgba(9,7,16,.55);
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%;overflow:hidden;background:var(--void);color:var(--ink);
@@ -17,13 +16,15 @@
   canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 
   #veil{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
-    gap:1.5rem;background:radial-gradient(120% 90% at 50% 42%,#06140d40 0%,#040605 72%);z-index:30;transition:opacity .6s ease}
+    gap:1.5rem;background:radial-gradient(120% 90% at 50% 42%,#0d081f40 0%,#040308 72%);z-index:30;transition:opacity .6s ease}
   #veil.gone{opacity:0;pointer-events:none}
-  #veil h1{font-weight:300;font-size:1.5rem;letter-spacing:.42em;text-transform:uppercase;color:var(--gold-pale);padding-left:.42em}
+  #veil h1{font-weight:300;font-size:1.5rem;letter-spacing:.42em;text-transform:uppercase;
+    color:var(--gold-pale);padding-left:.42em}
   #veil p{color:var(--muted);font-size:.84rem;letter-spacing:.05em;max-width:33ch;text-align:center;line-height:1.8}
   .cta{display:flex;gap:.7rem;margin-top:.3rem;flex-wrap:wrap;justify-content:center}
   button.b{appearance:none;border:1px solid var(--gold-deep);background:transparent;color:var(--gold);
-    font:inherit;font-size:.78rem;letter-spacing:.1em;padding:.62rem 1.3rem;border-radius:999px;cursor:pointer;transition:.18s;text-transform:uppercase}
+    font:inherit;font-size:.78rem;letter-spacing:.1em;padding:.62rem 1.3rem;border-radius:999px;cursor:pointer;
+    transition:.18s;text-transform:uppercase}
   button.b:hover{border-color:var(--gold);background:rgba(245,197,66,.08);color:var(--gold-pale)}
   button.b.solid{background:var(--gold);color:#1a1206;border-color:var(--gold)}
   button.b.solid:hover{background:var(--gold-pale)}
@@ -40,7 +41,7 @@
   .sep{width:1px;height:26px;background:var(--line)}
   .ctl{display:flex;align-items:center;gap:8px}
   .ctl label{font-size:.64rem;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;white-space:nowrap}
-  input[type=range]{-webkit-appearance:none;width:72px;height:3px;border-radius:3px;background:var(--gold-deep);outline:none}
+  input[type=range]{-webkit-appearance:none;width:76px;height:3px;border-radius:3px;background:var(--gold-deep);outline:none}
   input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--gold);cursor:pointer}
   input[type=range]::-moz-range-thumb{width:13px;height:13px;border:none;border-radius:50%;background:var(--gold);cursor:pointer}
 
@@ -68,20 +69,20 @@
 <div id="nav">
   <a href="index.html" class="home" title="Menu" aria-label="Menu">≡</a>
   <a href="aurum.html">Aurum</a>
-  <a href="torus.html" class="active">Torus</a>
-  <a href="galaxy.html">Galaxy</a>
+  <a href="torus.html">Torus</a>
+  <a href="galaxy.html" class="active">Galaxy</a>
 </div>
 
 <div id="hud" class="hide">
-  <div>torus</div>
-  <div>weave <b id="hWv">0.60</b></div>
+  <div>spiral galaxy</div>
+  <div>stars <b id="hStars">—</b></div>
   <div>centroid <b id="hHz">—</b></div>
   <div class="meter"><i id="hLvl"></i></div>
 </div>
 
 <div id="veil">
-  <h1>Torus</h1>
-  <p>A torus that breathes with your gong — swelling on each strike, settling as it rings out, emerald light pulsing from its core. Load a recording, or play live.</p>
+  <h1>Galaxy</h1>
+  <p>A spiral galaxy that sparkles with your gong — stars glittering on every shimmer, the core flaring with each strike. Load a recording, or play live.</p>
   <div class="cta">
     <button class="b solid" id="vFile">Load audio</button>
     <button class="b" id="vMic">Use live mic</button>
@@ -101,8 +102,7 @@
   </button>
   <div class="sep"></div>
   <div class="ctl"><label>React</label><input type="range" id="react" min="0.3" max="2.5" step="0.05" value="1.1"></div>
-  <div class="ctl"><label>Glow</label><input type="range" id="glow" min="0.4" max="6" step="0.1" value="1"></div>
-  <div class="ctl"><label>Weave</label><input type="range" id="weave" min="0.1" max="1.6" step="0.02" value="0.6"></div>
+  <div class="ctl"><label>Sparkle</label><input type="range" id="sparkle" min="0.2" max="3" step="0.05" value="1"></div>
   <div class="ctl"><label>Spin</label><input type="range" id="spin" min="0" max="2" step="0.05" value="1"></div>
   <div class="sep"></div>
   <button class="ic" id="dFull" title="Fullscreen" aria-label="Fullscreen">
@@ -118,9 +118,7 @@
 const TAU=Math.PI*2;
 const clamp=(v,a,b)=>v<a?a:(v>b?b:v);
 const cvs=document.getElementById('c'), ctx=cvs.getContext('2d');
-const gc=document.createElement('canvas'), gctx=gc.getContext('2d');   // isolated gold layer
-const supportsFilter = (()=>{ try{ ctx.filter='blur(1px)'; const ok=ctx.filter!=='none'; ctx.filter='none'; return ok; }catch(e){ return false; } })();
-let W=0,H=0,cx=0,cy=0,R0=0,DPR=Math.min(2,window.devicePixelRatio||1);
+let W=0,H=0,cx=0,cy=0,Rg=0,DPR=Math.min(2,window.devicePixelRatio||1);
 
 // ---------- audio (proven pipeline) ----------
 let actx=null, analyser=null, srcNode=null, micStream=null;
@@ -203,94 +201,144 @@ function analyze(){
   feat.centroid+=(centroid-feat.centroid)*0.07;
 }
 
-// ---------- render ----------
-let spinAng=0, act=0, last=0, emEnv=0, emStr=0, emPulse=0;
-
-// gold lines drawn onto the ISOLATED layer (gctx). Warm core so the bloom stays golden, not white.
-function gstrokeG(a){
-  gctx.strokeStyle='rgba(214,168,72,'+(0.42*a)+')'; gctx.lineWidth=2.6*DPR; gctx.stroke();
-  gctx.strokeStyle='rgba(255,226,150,'+(0.95*a)+')'; gctx.lineWidth=1.1*DPR; gctx.stroke();
+// ---------- star field: logarithmic spiral arms + halo scatter ----------
+// star: u radius 0..1, ang base angle, sz px, tw twinkle phase, twSp speed,
+//       col palette index, hero = bright star that gets a cross glint
+const PAL=[
+  [255,255,255],[196,214,255],[152,172,255],[178,142,255],
+  [214,152,255],[126,142,236],[236,190,255]
+];
+const ARMS=2, PITCH=2.55, NSTARS=2400;
+let stars=[];
+function gauss(){ return (Math.random()+Math.random()+Math.random())/1.5-1; }   // ~N(0,0.33)
+function buildStars(){
+  stars=[];
+  for(let i=0;i<NSTARS;i++){
+    const halo=Math.random()<0.16;                 // loose stars between the arms
+    const u=Math.pow(Math.random(),0.72);          // denser toward the core
+    let ang;
+    if(halo){ ang=Math.random()*TAU; }
+    else{
+      const arm=(Math.random()*ARMS)|0;
+      const scatter=gauss()*(0.10+0.30*u);         // arms widen with radius
+      ang=arm*TAU/ARMS + PITCH*Math.log(0.06+u) + scatter;
+    }
+    const hero=Math.random()<0.02;
+    stars.push({
+      u, ang,
+      sz:(hero?1.9+Math.random()*1.4:0.5+Math.random()*1.1)*DPR,
+      tw:Math.random()*TAU, twSp:0.8+Math.random()*2.6,
+      base:halo?0.25+Math.random()*0.3:0.4+Math.random()*0.5,
+      col:PAL[(Math.random()*PAL.length)|0], hero
+    });
+  }
 }
+buildStars();
+// nebula wisps: big soft blobs riding the same spiral, drawn behind the stars
+let wisps=[];
+function buildWisps(){
+  wisps=[];
+  for(let i=0;i<70;i++){
+    const u=0.12+Math.pow(Math.random(),0.8)*0.85;
+    const arm=(Math.random()*ARMS)|0;
+    const ang=arm*TAU/ARMS + PITCH*Math.log(0.06+u) + gauss()*0.16;
+    const t=Math.random();
+    wisps.push({u,ang,sz:(26+Math.random()*60),
+      cr:t<0.5?110+t*120:170, cg:t<0.5?100:70+t*60, cb:220+Math.random()*35,
+      a:0.05+Math.random()*0.07});
+  }
+}
+buildWisps();
 
-// torus geometry (head-on, down the axis). r near R closes the hole to a tight central swirl.
-const TR=1.0, Tr=0.965;          // ring / tube radii
-const NPET=26, MSEG=150;         // windings per family, segments per winding
+// ---------- render ----------
+let rot=0, act=0, waves=[], last=0, coreEnv=0;
 
 function draw(t){
   const dt=Math.min(0.05,(t-last)/1000||0); last=t;
   const live=(mode==='mic')||(mode==='file'&&filePlaying);
   act+=((live?1:0)-act)*0.02;
-  const react=parseFloat(reactEl.value), g=parseFloat(glowEl.value),
-        weave=parseFloat(weaveEl.value), spin=parseFloat(spinEl.value);
 
-  spinAng += 0.085*spin*dt*(0.4+0.6*act);
+  const react=parseFloat(reactEl.value), spk=parseFloat(sparkleEl.value), spin=parseFloat(spinEl.value);
+  rot+=(0.028 + feat.mid*0.30*react)*dt*spin*(0.25+0.75*act);
 
-  // ============ LAYER 1 — emerald floor (NORMAL compositing: saturated, cannot wash) ============
   ctx.globalCompositeOperation='source-over';
-  ctx.fillStyle='#03100a'; ctx.fillRect(0,0,W,H);
-  // envelopes: intensity (attack/release), strike strength (colour), breath radius (expand/contract)
-  const eT=feat.kick*1.1 + feat.level*0.30;
-  emEnv += (eT-emEnv)*(eT>emEnv?0.4:0.02);
-  emStr += (clamp(feat.kick/1.8,0,1)-emStr)*0.16;
-  emPulse = emPulse*0.945 + feat.kick*0.06;
-  const emR=R0*(1.7+2.6*clamp(emPulse,0,1.3));
-  // colour: pale jade (soft strike) -> deep dark emerald (heavy strike)
-  const s=clamp(emStr,0,1);
-  const cr=Math.round(74+(6-74)*s), cg=Math.round(214+(86-214)*s), cb=Math.round(150+(54-150)*s);
-  const A=clamp((0.16+0.95*emEnv)*(0.22+0.78*act),0,0.96);
-  const eg=ctx.createRadialGradient(cx,cy,0,cx,cy,emR);
-  eg.addColorStop(0,   'rgba('+cr+','+cg+','+cb+','+A+')');
-  eg.addColorStop(0.42,'rgba('+Math.round(cr*0.5)+','+Math.round(cg*0.55)+','+Math.round(cb*0.52)+','+(A*0.5)+')');
-  eg.addColorStop(1,   'rgba(3,16,10,0)');
-  ctx.fillStyle=eg; ctx.fillRect(0,0,W,H);
-
-  // ============ LAYER 2 — gold rosette on its own transparent layer (additive in isolation) ======
-  gctx.setTransform(1,0,0,1,0,0);
-  gctx.clearRect(0,0,W,H);
-  gctx.globalCompositeOperation='lighter';
-  const plateR=Math.min(W,H)*0.44, S=plateR/(TR+Tr);
-  const shear=weave*(1+0.05*feat.kick);
-  const amp=(0.18+0.82*act)*(0.5+0.8*clamp(feat.level*react,0,1)) + feat.kick*0.3*act;
-  for(let fam=0;fam<2;fam++){
-    const dir=fam?-1:1, phase=fam?Math.PI/NPET:0;
-    for(let i=0;i<NPET;i++){
-      const u0=i*TAU/NPET + spinAng*dir + phase;
-      gctx.beginPath();
-      for(let j=0;j<=MSEG;j++){
-        const v=j/MSEG*TAU;
-        const rad=(TR+Tr*Math.cos(v))*S, u=u0+dir*shear*v;
-        const x=cx+rad*Math.cos(u), y=cy+rad*Math.sin(u);
-        j?gctx.lineTo(x,y):gctx.moveTo(x,y);
-      }
-      gstrokeG(amp*0.82);
-    }
-  }
-  gctx.beginPath(); gctx.arc(cx,cy,(TR+Tr)*S,0,TAU); gstrokeG(amp*0.5);
-
-  // ============ LAYER 3 — composite gold as bloom: soft blurred halo + crisp lines ==============
-  // soft additive halo (restrained, so it only kisses the emerald near the lines)
+  ctx.fillStyle='#040308'; ctx.fillRect(0,0,W,H);
   ctx.globalCompositeOperation='lighter';
-  ctx.globalAlpha=clamp(0.30+0.10*g,0,0.7);
-  if(supportsFilter){ ctx.filter='blur('+Math.min(20,(3+2.4*g))+'px)'; ctx.drawImage(gc,0,0); ctx.filter='none'; }
-  else { ctx.drawImage(gc,0,0); }
-  // crisp colour-true lines on top
-  ctx.globalAlpha=1;
-  ctx.globalCompositeOperation='source-over';
-  ctx.drawImage(gc,0,0);
 
-  // ============ LAYER 4 — multiply vignette: restore rich blacks + frame the form ===============
-  ctx.globalCompositeOperation='multiply';
-  const vg=ctx.createRadialGradient(cx,cy,R0*0.4,cx,cy,Math.hypot(W,H)*0.62);
-  vg.addColorStop(0,'#ffffff'); vg.addColorStop(0.62,'#cdd4cf'); vg.addColorStop(1,'#0b120e');
-  ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
-  ctx.globalCompositeOperation='source-over';
+  const breathe=1 + 0.07*feat.low*react;
+  const diff=u=>rot*(1.65-0.95*u);                 // differential rotation: core leads
+
+  // ---- nebula wisps ----
+  for(const wsp of wisps){
+    const rad=wsp.u*Rg*breathe, ang=wsp.ang+diff(wsp.u);
+    const x=cx+Math.cos(ang)*rad, y=cy+Math.sin(ang)*rad;
+    const s=wsp.sz*DPR*(0.8+0.5*feat.level*react);
+    const a=wsp.a*(0.35+0.65*act)*(0.6+0.8*feat.level*react);
+    const ng=ctx.createRadialGradient(x,y,0,x,y,s);
+    ng.addColorStop(0,'rgba('+wsp.cr+','+wsp.cg+','+wsp.cb+','+a+')');
+    ng.addColorStop(1,'rgba('+wsp.cr+','+wsp.cg+','+wsp.cb+',0)');
+    ctx.fillStyle=ng; ctx.fillRect(x-s,y-s,s*2,s*2);
+  }
+
+  // ---- core: white heart flaring on strikes, violet halo breathing with level ----
+  coreEnv += (feat.kick*1.1+feat.level*0.3-coreEnv)*(feat.kick>coreEnv?0.5:0.03);
+  const coreR=Rg*(0.16+0.10*clamp(coreEnv,0,1.4))*breathe;
+  const cg1=ctx.createRadialGradient(cx,cy,0,cx,cy,coreR);
+  cg1.addColorStop(0,'rgba(255,252,244,'+(0.55+0.4*clamp(coreEnv,0,1))+')');
+  cg1.addColorStop(0.5,'rgba(216,196,255,'+(0.28+0.3*clamp(coreEnv,0,1))+')');
+  cg1.addColorStop(1,'rgba(160,130,255,0)');
+  ctx.fillStyle=cg1; ctx.fillRect(cx-coreR,cy-coreR,coreR*2,coreR*2);
+  const haloR=Rg*(0.62+0.25*clamp(coreEnv,0,1.4));
+  const cg2=ctx.createRadialGradient(cx,cy,0,cx,cy,haloR);
+  cg2.addColorStop(0,'rgba(150,120,255,'+(0.10+0.14*feat.level*react)+')');
+  cg2.addColorStop(1,'rgba(90,60,200,0)');
+  ctx.fillStyle=cg2; ctx.fillRect(cx-haloR,cy-haloR,haloR*2,haloR*2);
+
+  // ---- strike waves: a ring of light sweeping outward, igniting stars as it passes ----
+  if(feat.kick>0.5 && (!waves.length || waves[waves.length-1].r>Rg*0.18))
+    waves.push({r:Rg*0.06, v:Rg*(0.9+0.5*feat.kick), life:1});
+  for(let i=waves.length-1;i>=0;i--){
+    const w=waves[i]; w.r+=w.v*dt; w.life-=dt*0.55;
+    if(w.life<=0) waves.splice(i,1);
+  }
+  const band=Rg*0.09;
+
+  // ---- stars ----
+  const twGain=(0.25+feat.high*react*5)*spk;       // shimmer drives the glitter
+  const heroes=[];
+  for(const st of stars){
+    const rad=st.u*Rg*breathe, ang=st.ang+diff(st.u);
+    const x=cx+Math.cos(ang)*rad, y=cy+Math.sin(ang)*rad;
+    st.tw+=dt*st.twSp*(1+feat.high*react*5*spk);
+    let a=st.base*(0.30+0.70*act)*(0.35+0.65*(0.5+0.5*Math.sin(st.tw))*clamp(twGain,0,1.6));
+    for(const w of waves){
+      const d=Math.abs(rad-w.r);
+      if(d<band) a+=w.life*(1-d/band)*0.85;
+    }
+    if(a<=0.02) continue;
+    a=clamp(a,0,1);
+    const c=st.col;
+    ctx.fillStyle='rgba('+c[0]+','+c[1]+','+c[2]+','+a+')';
+    ctx.fillRect(x-st.sz/2,y-st.sz/2,st.sz,st.sz);
+    if(st.hero && a>0.45) heroes.push({x,y,a,c,s:st.sz});
+  }
+  // cross glints on the brightest stars — the actual "sparkle"
+  ctx.lineWidth=1*DPR;
+  for(const h of heroes){
+    const len=h.s*(2.6+3*feat.high*react*spk);
+    ctx.strokeStyle='rgba('+h.c[0]+','+h.c[1]+','+h.c[2]+','+(h.a*0.7)+')';
+    ctx.beginPath();
+    ctx.moveTo(h.x-len,h.y); ctx.lineTo(h.x+len,h.y);
+    ctx.moveTo(h.x,h.y-len); ctx.lineTo(h.x,h.y+len);
+    ctx.stroke();
+  }
 
   if(t-hudT>140){ updateHUD(); hudT=t; }
   requestAnimationFrame(draw);
 }
 let hudT=0;
 function updateHUD(){
-  hWv.textContent=parseFloat(weaveEl.value).toFixed(2);
+  hStars.textContent=NSTARS;
   hHz.textContent=Math.round(feat.centroid)+' Hz';
   hLvl.style.width=Math.min(100,feat.level*200)+'%';
 }
@@ -300,14 +348,13 @@ function loopFeat(){ analyze(); setTimeout(loopFeat,1000/60); }
 // ---------- layout ----------
 function resize(){
   W=Math.floor(innerWidth*DPR); H=Math.floor(innerHeight*DPR);
-  cvs.width=W; cvs.height=H; gc.width=W; gc.height=H; cx=W/2; cy=H/2; R0=Math.min(W,H)*0.16;
+  cvs.width=W; cvs.height=H; cx=W/2; cy=H/2; Rg=Math.min(W,H)*0.46;
 }
 addEventListener('resize',resize);
 
 // ---------- UI ----------
-const reactEl=document.getElementById('react'), glowEl=document.getElementById('glow'),
-      weaveEl=document.getElementById('weave'), spinEl=document.getElementById('spin');
-const hWv=document.getElementById('hWv'), hHz=document.getElementById('hHz'), hLvl=document.getElementById('hLvl');
+const reactEl=document.getElementById('react'), sparkleEl=document.getElementById('sparkle'), spinEl=document.getElementById('spin');
+const hStars=document.getElementById('hStars'), hHz=document.getElementById('hHz'), hLvl=document.getElementById('hLvl');
 const veil=document.getElementById('veil'), dock=document.getElementById('dock'), hud=document.getElementById('hud'), nav=document.getElementById('nav');
 const filePick=document.getElementById('filePick');
 function reveal(){ veil.classList.add('gone'); dock.classList.remove('hide'); hud.classList.remove('hide'); poke(); }
