@@ -105,7 +105,7 @@
   </button>
   <div class="sep"></div>
   <div class="ctl"><label>React</label><input type="range" id="react" min="0.3" max="2.5" step="0.05" value="1.1"></div>
-  <div class="ctl"><label>Weave</label><input type="range" id="weave" min="0.1" max="1.6" step="0.02" value="0.6"></div>
+  <div class="ctl"><label>Weave</label><input type="range" id="weave" min="0.1" max="0.8" step="0.02" value="0.6"></div>
   <div class="ctl"><label>Spin</label><input type="range" id="spin" min="0" max="2" step="0.05" value="1"></div>
   <div class="sep"></div>
   <button class="ic" id="dFull" title="Fullscreen" aria-label="Fullscreen">
@@ -252,10 +252,10 @@ function draw(t){
   const eT=feat.kick*1.3 + feat.level*0.60;
   emEnv += (eT-emEnv)*(eT>emEnv?0.4:0.02);
   emStr += (clamp(feat.kick/1.8,0,1)-emStr)*0.16;
-  emPulse = emPulse*0.945 + feat.kick*0.09;
+  emPulse = emPulse*0.978 + feat.kick*0.052;
   // bloom sweeps from the core out to the torus rim at peak — never beyond it
   const plateR=Math.min(W,H)*0.44;
-  const emR=plateR*(0.30+0.70*clamp(emPulse,0,1));
+  const emR=plateR*(0.30+0.70*clamp(emPulse*1.3,0,1));
   // colour: pale jade (soft, bright pitch) -> deep dark emerald (heavy, low pitch)
   const s=clamp(0.55*emStr + 0.6*(1-feat.bloom), 0, 1);
   const cr=Math.round(52+(2-52)*s), cg=Math.round(208+(64-208)*s), cb=Math.round(138+(38-138)*s);
