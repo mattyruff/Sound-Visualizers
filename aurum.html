@@ -123,6 +123,9 @@ const TAU=Math.PI*2;
 const clamp=(v,a,b)=>v<a?a:(v>b?b:v);
 const cvs=document.getElementById('c'), ctx=cvs.getContext('2d');
 let W=0,H=0,cx=0,cy=0,R0=0,DPR=Math.min(2,window.devicePixelRatio||1);
+const MOBILE=matchMedia('(pointer:coarse)').matches||Math.min(screen.width||1024,screen.height||768)<=820;
+const FRAME_MS=MOBILE?33:0;                      // ~30fps cap on phones
+let lastDraw=0, rafLive=true;
 
 // ---------- audio (proven pipeline) ----------
 let actx=null, analyser=null, srcNode=null, micStream=null;
@@ -239,13 +242,13 @@ buildLattice();
 let rot=0, act=0, waves=[], last=0, violetEnv=0, breaths=[];
 const sparks=[]; for(let i=0;i<18;i++) sparks.push({a:Math.random()*TAU,sp:0.2+Math.random()*0.5,tw:Math.random()*TAU});
 
+// glow via layered strokes on one shared path — same look as shadowBlur at ~1/10 the cost
 function circleGlow(x,y,r,alpha,g){
-  ctx.shadowColor='#f5c542'; ctx.shadowBlur=16*g;
-  ctx.strokeStyle='rgba(201,152,47,'+(0.45*alpha)+')'; ctx.lineWidth=2.4*DPR;
-  ctx.beginPath(); ctx.arc(x,y,r,0,TAU); ctx.stroke();
-  ctx.shadowBlur=7*g;
-  ctx.strokeStyle='rgba(255,233,168,'+(0.92*alpha)+')'; ctx.lineWidth=1.1*DPR;
-  ctx.beginPath(); ctx.arc(x,y,r,0,TAU); ctx.stroke();
+  const gw=Math.min(g,3);
+  ctx.beginPath(); ctx.arc(x,y,r,0,TAU);
+  ctx.strokeStyle='rgba(201,152,47,'+(0.11*alpha)+')'; ctx.lineWidth=(6+5*gw)*DPR; ctx.stroke();
+  ctx.strokeStyle='rgba(214,168,72,'+(0.30*alpha)+')'; ctx.lineWidth=(2.4+1.2*gw)*DPR; ctx.stroke();
+  ctx.strokeStyle='rgba(255,233,168,'+(0.92*alpha)+')'; ctx.lineWidth=1.1*DPR; ctx.stroke();
 }
 function drawSeed(R, reach, alphaMul, g){
   let n=0;
@@ -259,8 +262,13 @@ function drawSeed(R, reach, alphaMul, g){
 }
 
 function draw(t){
+  if(document.hidden){ rafLive=false; return; }    // pause fully when backgrounded
+  const liveNow=(mode==='mic')||(mode==='file'&&filePlaying);
+  const gap=(!liveNow&&act<0.02)?125:FRAME_MS;     // idle -> ~8fps, mobile -> ~30fps
+  if(gap&&t-lastDraw<gap){ requestAnimationFrame(draw); return; }
+  lastDraw=t;
   const dt=Math.min(0.05,(t-last)/1000||0); last=t;
-  const live=(mode==='mic')||(mode==='file'&&filePlaying);
+  const live=liveNow;
   act+=((live?1:0)-act)*0.02;
 
   const react=parseFloat(reactEl.value), g=parseFloat(glowEl.value)*(0.55+0.6*act), spin=parseFloat(spinEl.value);
@@ -328,17 +336,16 @@ function draw(t){
   // strike waves — light expanding through the geometry
   if(feat.kick>0.3 && (!waves.length || waves[waves.length-1].r>R*0.25))
     waves.push({r:R*0.2, v:R*(2.4+feat.kick), life:1});
-  ctx.shadowBlur=12*g; ctx.shadowColor='#ffe9a8';
   for(let i=waves.length-1;i>=0;i--){
     const w=waves[i]; w.r+=w.v*dt; w.life-=dt*0.8;
     if(w.life<=0){ waves.splice(i,1); continue; }
-    ctx.strokeStyle='rgba(255,233,168,'+(0.5*w.life)+')'; ctx.lineWidth=1.4*DPR;
-    ctx.beginPath(); ctx.arc(cx,cy,w.r,0,TAU); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx,cy,w.r,0,TAU);
+    ctx.strokeStyle='rgba(255,233,168,'+(0.14*w.life)+')'; ctx.lineWidth=(4+3*g)*DPR; ctx.stroke();
+    ctx.strokeStyle='rgba(255,233,168,'+(0.5*w.life)+')'; ctx.lineWidth=1.4*DPR; ctx.stroke();
   }
 
   // orbiting sparks (6-fold), twinkle with shimmer
   const sr=R*(1.62+0.1*feat.low);
-  ctx.shadowBlur=8*g; ctx.shadowColor='#f5c542';
   for(const s of sparks){
     s.a+=s.sp*dt*spin*(0.4+act)*0.15; s.tw+=dt*4;
     const tw=(0.5+0.5*Math.sin(s.tw))*(0.3+feat.high*react*3)*act;
@@ -350,7 +357,6 @@ function draw(t){
     }
   }
 
-  ctx.shadowBlur=0;
   if(t-hudT>140){ updateHUD(drawn); hudT=t; }
   requestAnimationFrame(draw);
 }
@@ -360,7 +366,7 @@ function updateHUD(circ){
   hLvl.style.width=Math.min(100,feat.level*200)+'%';
 }
 
-function loopFeat(){ analyze(); setTimeout(loopFeat,1000/60); }
+function loopFeat(){ analyze(); setTimeout(loopFeat, document.hidden?250:1000/60); }
 
 // ---------- layout ----------
 function resize(){
@@ -396,6 +402,9 @@ function poke(){
 }
 ['mousemove','touchstart','keydown'].forEach(ev=>addEventListener(ev,poke));
 ['touchend','click'].forEach(ev=>addEventListener(ev,()=>{ if(actx&&actx.state==='suspended') actx.resume(); }));
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden && !rafLive){ rafLive=true; last=performance.now(); lastDraw=0; requestAnimationFrame(draw); }
+});
 
 // go
 resize(); loopFeat(); requestAnimationFrame(draw);

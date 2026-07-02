@@ -124,6 +124,9 @@ const cvs=document.getElementById('c'), ctx=cvs.getContext('2d');
 const gc=document.createElement('canvas'), gctx=gc.getContext('2d');   // isolated gold layer
 const supportsFilter = (()=>{ try{ ctx.filter='blur(1px)'; const ok=ctx.filter!=='none'; ctx.filter='none'; return ok; }catch(e){ return false; } })();
 let W=0,H=0,cx=0,cy=0,R0=0,DPR=Math.min(2,window.devicePixelRatio||1);
+const MOBILE=matchMedia('(pointer:coarse)').matches||Math.min(screen.width||1024,screen.height||768)<=820;
+const FRAME_MS=MOBILE?33:0;                      // ~30fps cap on phones
+let lastDraw=0, rafLive=true;
 
 // ---------- audio (proven pipeline) ----------
 let actx=null, analyser=null, srcNode=null, micStream=null;
@@ -237,8 +240,13 @@ const TR=1.0, Tr=0.93;           // ring / tube radii (gap = TR-Tr sets the cent
 const NPET=26, MSEG=150;         // windings per family, segments per winding
 
 function draw(t){
+  if(document.hidden){ rafLive=false; return; }    // pause fully when backgrounded
+  const liveNow=(mode==='mic')||(mode==='file'&&filePlaying);
+  const gap=(!liveNow&&act<0.02)?125:FRAME_MS;     // idle -> ~8fps, mobile -> ~30fps
+  if(gap&&t-lastDraw<gap){ requestAnimationFrame(draw); return; }
+  lastDraw=t;
   const dt=Math.min(0.05,(t-last)/1000||0); last=t;
-  const live=(mode==='mic')||(mode==='file'&&filePlaying);
+  const live=liveNow;
   act+=((live?1:0)-act)*0.02;
   const shine=parseFloat(shineEl.value),
         weave=parseFloat(weaveEl.value), spin=parseFloat(spinEl.value);
@@ -296,7 +304,7 @@ function draw(t){
   // soft additive halo (restrained, so it only kisses the emerald near the lines)
   ctx.globalCompositeOperation='lighter';
   ctx.globalAlpha=clamp(0.18+0.22*shine,0,0.7);
-  if(supportsFilter){ ctx.filter='blur('+Math.min(20,(3+2.4*shine))+'px)'; ctx.drawImage(gc,0,0); ctx.filter='none'; }
+  if(supportsFilter&&!MOBILE){ ctx.filter='blur('+Math.min(20,(3+2.4*shine))+'px)'; ctx.drawImage(gc,0,0); ctx.filter='none'; }
   else { ctx.drawImage(gc,0,0); }
   // crisp colour-true lines on top
   ctx.globalAlpha=1;
@@ -320,7 +328,7 @@ function updateHUD(){
   hLvl.style.width=Math.min(100,feat.level*200)+'%';
 }
 
-function loopFeat(){ analyze(); setTimeout(loopFeat,1000/60); }
+function loopFeat(){ analyze(); setTimeout(loopFeat, document.hidden?250:1000/60); }
 
 // ---------- layout ----------
 function resize(){
@@ -357,6 +365,9 @@ function poke(){
 }
 ['mousemove','touchstart','keydown'].forEach(ev=>addEventListener(ev,poke));
 ['touchend','click'].forEach(ev=>addEventListener(ev,()=>{ if(actx&&actx.state==='suspended') actx.resume(); }));
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden && !rafLive){ rafLive=true; last=performance.now(); lastDraw=0; requestAnimationFrame(draw); }
+});
 
 // go
 resize(); loopFeat(); requestAnimationFrame(draw);

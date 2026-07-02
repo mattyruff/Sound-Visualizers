@@ -123,6 +123,9 @@ const TAU=Math.PI*2;
 const clamp=(v,a,b)=>v<a?a:(v>b?b:v);
 const cvs=document.getElementById('c'), ctx=cvs.getContext('2d');
 let W=0,H=0,cx=0,cy=0,Rg=0,DPR=Math.min(2,window.devicePixelRatio||1);
+const MOBILE=matchMedia('(pointer:coarse)').matches||Math.min(screen.width||1024,screen.height||768)<=820;
+const FRAME_MS=MOBILE?33:0;                      // ~30fps cap on phones
+let lastDraw=0, rafLive=true;
 
 // ---------- audio (proven pipeline) ----------
 let actx=null, analyser=null, srcNode=null, micStream=null;
@@ -283,8 +286,13 @@ let rot=0, act=0, waves=[], last=0, coreEnv=0;
 let comets=[], lastComet=-99;
 
 function draw(t){
+  if(document.hidden){ rafLive=false; return; }    // pause fully when backgrounded
+  const liveNow=(mode==='mic')||(mode==='file'&&filePlaying);
+  const gap=(!liveNow&&act<0.02)?125:FRAME_MS;     // idle -> ~8fps, mobile -> ~30fps
+  if(gap&&t-lastDraw<gap){ requestAnimationFrame(draw); return; }
+  lastDraw=t;
   const dt=Math.min(0.05,(t-last)/1000||0); last=t;
-  const live=(mode==='mic')||(mode==='file'&&filePlaying);
+  const live=liveNow;
   act+=((live?1:0)-act)*0.02;
 
   const react=parseFloat(reactEl.value), spk=parseFloat(sparkleEl.value), spin=parseFloat(spinEl.value);
@@ -397,7 +405,7 @@ function updateHUD(){
   hLvl.style.width=Math.min(100,feat.level*200)+'%';
 }
 
-function loopFeat(){ analyze(); setTimeout(loopFeat,1000/60); }
+function loopFeat(){ analyze(); setTimeout(loopFeat, document.hidden?250:1000/60); }
 
 // ---------- layout ----------
 function resize(){
@@ -434,6 +442,9 @@ function poke(){
 }
 ['mousemove','touchstart','keydown'].forEach(ev=>addEventListener(ev,poke));
 ['touchend','click'].forEach(ev=>addEventListener(ev,()=>{ if(actx&&actx.state==='suspended') actx.resume(); }));
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden && !rafLive){ rafLive=true; last=performance.now(); lastDraw=0; requestAnimationFrame(draw); }
+});
 
 // go
 resize(); loopFeat(); requestAnimationFrame(draw);
