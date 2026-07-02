@@ -84,7 +84,8 @@
   <h1>Galaxy</h1>
   <p>A spiral galaxy that sparkles with your gong — stars glittering on every shimmer, the core flaring with each strike. Load a recording, or play live.</p>
   <div class="cta">
-    <button class="b solid" id="vFile">Load audio</button>
+    <button class="b solid" id="vSample">Play sample gong</button>
+    <button class="b" id="vFile">Load audio</button>
     <button class="b" id="vMic">Use live mic</button>
   </div>
   <p style="font-size:.7rem;opacity:.7">or drop an audio file anywhere</p>
@@ -92,13 +93,16 @@
 
 <div id="dock" class="hide">
   <button class="ic" id="dPlay" title="Play / pause" aria-label="Play or pause">
-    <svg id="dPlayIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+    <svg viewBox="0 0 24 24"><path id="dPlayIcon" d="M8 5v14l11-7z"/></svg>
   </button>
   <button class="ic" id="dFile" title="Load audio file" aria-label="Load audio file">
     <svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M9 9l3 3 3-3"/><path d="M12 12V5"/></svg>
   </button>
   <button class="ic" id="dMic" title="Live microphone" aria-label="Live microphone">
     <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg>
+  </button>
+  <button class="ic" id="dSample" title="Sample gong" aria-label="Sample gong">
+    <svg viewBox="0 0 24 24"><path d="M4 4l3 2m13-2l-3 2"/><circle cx="12" cy="13" r="8"/><circle cx="12" cy="13" r="3"/></svg>
   </button>
   <div class="sep"></div>
   <div class="ctl"><label>React</label><input type="range" id="react" min="0.3" max="2.5" step="0.05" value="1.1"></div>
@@ -170,6 +174,14 @@ async function useMic(){
   catch(e){ alert('Mic unavailable — check browser permissions.'); return; }
   srcNode=actx.createMediaStreamSource(micStream); srcNode.connect(analyser);
   reveal(); syncPlay();
+}
+async function useSample(){
+  try{
+    ensureCtx(); await actx.resume(); disconnectSrc(); mode='file';
+    const r=await fetch('assets/sample-gong.mp3'); if(!r.ok) throw new Error('HTTP '+r.status);
+    buf=await decode(await r.arrayBuffer()); pauseOffset=0; startBuf();
+    reveal(); syncPlay();
+  }catch(err){ console.error(err); alert('Could not load the sample gong.'); }
 }
 function syncPlay(){
   const playing = mode==='mic' || (mode==='file' && filePlaying);
@@ -364,6 +376,8 @@ document.getElementById('dFile').onclick=()=>filePick.click();
 filePick.onchange=e=>{ if(e.target.files[0]) useFile(e.target.files[0]); };
 document.getElementById('vMic').onclick=useMic;
 document.getElementById('dMic').onclick=useMic;
+document.getElementById('vSample').onclick=useSample;
+document.getElementById('dSample').onclick=useSample;
 document.getElementById('dPlay').onclick=()=>{ if(mode==='file'){ filePlaying?stopBuf():startBuf(); } syncPlay(); };
 document.getElementById('dFull').onclick=()=>{ if(!document.fullscreenElement) document.documentElement.requestFullscreen?.(); else document.exitFullscreen?.(); };
 
