@@ -123,7 +123,7 @@ const TAU=Math.PI*2;
 const clamp=(v,a,b)=>v<a?a:(v>b?b:v);
 const cvs=document.getElementById('c'), ctx=cvs.getContext('2d');
 let W=0,H=0,cx=0,cy=0,Rg=0,DPR=Math.min(2,window.devicePixelRatio||1);
-const MOBILE=matchMedia('(pointer:coarse)').matches||Math.min(screen.width||1024,screen.height||768)<=820;
+const MOBILE=matchMedia('(pointer:coarse)').matches||(navigator.maxTouchPoints>0&&Math.min(screen.width||1024,screen.height||768)<=820);
 const FRAME_MS=MOBILE?33:0;                      // ~30fps cap on phones
 let lastDraw=0, rafLive=true;
 
