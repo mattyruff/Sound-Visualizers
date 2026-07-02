@@ -208,7 +208,7 @@ const PAL=[
   [255,255,255],[196,214,255],[152,172,255],[178,142,255],
   [214,152,255],[126,142,236],[236,190,255]
 ];
-const ARMS=2, PITCH=2.55, NSTARS=2400;
+const ARMS=9, PITCH=1.9, NSTARS=4200;
 let stars=[];
 function gauss(){ return (Math.random()+Math.random()+Math.random())/1.5-1; }   // ~N(0,0.33)
 function buildStars(){
@@ -220,7 +220,7 @@ function buildStars(){
     if(halo){ ang=Math.random()*TAU; }
     else{
       const arm=(Math.random()*ARMS)|0;
-      const scatter=gauss()*(0.10+0.30*u);         // arms widen with radius
+      const scatter=gauss()*(0.05+0.11*u);         // arms widen with radius
       ang=arm*TAU/ARMS + PITCH*Math.log(0.06+u) + scatter;
     }
     const hero=Math.random()<0.02;
@@ -241,7 +241,7 @@ function buildWisps(){
   for(let i=0;i<70;i++){
     const u=0.12+Math.pow(Math.random(),0.8)*0.85;
     const arm=(Math.random()*ARMS)|0;
-    const ang=arm*TAU/ARMS + PITCH*Math.log(0.06+u) + gauss()*0.16;
+    const ang=arm*TAU/ARMS + PITCH*Math.log(0.06+u) + gauss()*0.09;
     const t=Math.random();
     wisps.push({u,ang,sz:(26+Math.random()*60),
       cr:t<0.5?110+t*120:170, cg:t<0.5?100:70+t*60, cb:220+Math.random()*35,
