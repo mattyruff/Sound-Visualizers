@@ -126,7 +126,7 @@ let W=0,H=0,cx=0,cy=0,R0=0,DPR=Math.min(2,window.devicePixelRatio||1);
 
 // ---------- audio (proven pipeline) ----------
 let actx=null, analyser=null, srcNode=null, micStream=null;
-let freqBytes=null, timeBytes=null, binHz=0;
+let freqBytes=null, timeBytes=null, prevFreq=null, binHz=0;
 let buf=null, bufNode=null, filePlaying=false, pauseOffset=0, startedAt=0;
 let mode='idle';
 
@@ -136,6 +136,7 @@ function ensureCtx(){
   analyser=actx.createAnalyser();
   analyser.fftSize=4096; analyser.smoothingTimeConstant=0.6;
   freqBytes=new Uint8Array(analyser.frequencyBinCount);
+  prevFreq=new Uint8Array(analyser.frequencyBinCount);
   timeBytes=new Uint8Array(analyser.fftSize);
   binHz=actx.sampleRate/analyser.fftSize;
 }
@@ -197,16 +198,22 @@ function analyze(){
   analyser.getByteTimeDomainData(timeBytes);
   let s=0; for(let i=0;i<timeBytes.length;i++){const v=(timeBytes[i]-128)/128;s+=v*v;}
   const lvl=Math.sqrt(s/timeBytes.length);
-  let num=0,den=0,low=0,mid=0,high=0;
+  let num=0,den=0,low=0,mid=0,high=0,flux=0;
   const i0=Math.max(1,(30/binHz)|0), i1=Math.min(freqBytes.length,(8000/binHz)|0);
   const sLo=(250/binHz)|0, sHi=(2000/binHz)|0;
   for(let i=i0;i<i1;i++){
     const m=freqBytes[i]/255, f=i*binHz; num+=f*m; den+=m;
     if(i<sLo) low+=m; else if(i<sHi) mid+=m; else high+=m;
+    const df=freqBytes[i]-prevFreq[i]; if(df>0) flux+=df;
   }
+  prevFreq.set(freqBytes);
+  flux/=(i1-i0)*255;                       // mean positive spectral change per bin
   const centroid = den>0.001 ? num/den : feat.centroid;
+  // onset = level rise (clean strikes) OR spectral flux (strikes masked by a
+  // still-decaying previous strike, which only ever loses spectral energy)
   const rise=lvl-feat.prevLvl;
-  if(rise>0.04 && lvl>0.05) feat.kick=Math.min(1.8,feat.kick+rise*8);
+  const onset=Math.max(rise*8, (flux-0.005)*55);
+  if(onset>0.3 && lvl>0.05) feat.kick=Math.min(1.8,feat.kick+onset);
   feat.kick*=0.92; feat.prevLvl=feat.prevLvl*0.6+lvl*0.4;
   feat.level+=(lvl-feat.level)*0.22;
   feat.low+=(low*0.02-feat.low)*0.18; feat.mid+=(mid*0.012-feat.mid)*0.12; feat.high+=(high*0.01-feat.high)*0.2;
