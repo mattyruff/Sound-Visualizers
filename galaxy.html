@@ -191,7 +191,7 @@ function syncPlay(){
 }
 
 // ---------- features ----------
-const feat={level:0,centroid:600,low:0,mid:0,high:0,kick:0,prevLvl:0};
+const feat={level:0,centroid:600,low:0,mid:0,high:0,kick:0,prevLvl:0,bloom:0};
 function analyze(){
   if(!analyser){ feat.level=0; feat.kick*=0.9; return; }
   analyser.getByteFrequencyData(freqBytes);
@@ -218,6 +218,8 @@ function analyze(){
   feat.level+=(lvl-feat.level)*0.22;
   feat.low+=(low*0.02-feat.low)*0.18; feat.mid+=(mid*0.012-feat.mid)*0.12; feat.high+=(high*0.01-feat.high)*0.2;
   feat.centroid+=(centroid-feat.centroid)*0.07;
+  const bl=clamp((Math.log(feat.centroid)-Math.log(150))/(Math.log(4000)-Math.log(150)),0,1);
+  feat.bloom+=(bl-feat.bloom)*0.06;
 }
 
 // ---------- star field: logarithmic spiral arms + halo scatter ----------
@@ -227,7 +229,8 @@ const PAL=[
   [255,255,255],[196,214,255],[152,172,255],[178,142,255],
   [214,152,255],[126,142,236],[236,190,255]
 ];
-const ARMS=9, PITCH=1.9, NSTARS=4200;
+const ARMS=9, PITCH=1.9;
+const NSTARS=Math.min(screen.width||1024,screen.height||768)<=820?2600:4200;   // lighter on phones
 let stars=[];
 function gauss(){ return (Math.random()+Math.random()+Math.random())/1.5-1; }   // ~N(0,0.33)
 function buildStars(){
@@ -244,7 +247,7 @@ function buildStars(){
     }
     const hero=Math.random()<0.02;
     stars.push({
-      u, ang,
+      u, ang, halo,
       sz:(hero?1.9+Math.random()*1.4:0.5+Math.random()*1.1)*DPR,
       tw:Math.random()*TAU, twSp:0.8+Math.random()*2.6,
       base:halo?0.25+Math.random()*0.3:0.4+Math.random()*0.5,
@@ -253,24 +256,31 @@ function buildStars(){
   }
 }
 buildStars();
-// nebula wisps: big soft blobs riding the same spiral, drawn behind the stars
-let wisps=[];
-function buildWisps(){
-  wisps=[];
-  for(let i=0;i<70;i++){
-    const u=0.12+Math.pow(Math.random(),0.8)*0.85;
-    const arm=(Math.random()*ARMS)|0;
-    const ang=arm*TAU/ARMS + PITCH*Math.log(0.06+u) + gauss()*0.09;
-    const t=Math.random();
-    wisps.push({u,ang,sz:(26+Math.random()*60),
-      cr:t<0.5?110+t*120:170, cg:t<0.5?100:70+t*60, cb:220+Math.random()*35,
-      a:0.05+Math.random()*0.07});
+
+// dust lanes: dark filaments hugging the trailing edge of each arm, rendered
+// once to an offscreen canvas in pattern space and rotated with the galaxy
+let dustC=null, dustS=0;
+function buildDust(){
+  dustS=Math.ceil(Rg*2.3)||2;
+  dustC=document.createElement('canvas'); dustC.width=dustC.height=dustS;
+  const d=dustC.getContext('2d'), c0=dustS/2;
+  for(let arm=0;arm<ARMS;arm++){
+    for(let k=0;k<70;k++){
+      const p=k/69, u=0.14+p*0.92;
+      const ang=arm*TAU/ARMS + PITCH*Math.log(0.06+u) + 0.24 + gauss()*0.03;
+      const r=u*Rg, x=c0+Math.cos(ang)*r, y=c0+Math.sin(ang)*r;
+      const s=Rg*(0.016+0.012*Math.random());
+      const a=0.42*Math.sin(Math.PI*p)*(0.55+0.45*Math.random());
+      const g2=d.createRadialGradient(x,y,0,x,y,s);
+      g2.addColorStop(0,'rgba(4,3,12,'+a+')'); g2.addColorStop(1,'rgba(4,3,12,0)');
+      d.fillStyle=g2; d.fillRect(x-s,y-s,s*2,s*2);
+    }
   }
 }
-buildWisps();
 
 // ---------- render ----------
 let rot=0, act=0, waves=[], last=0, coreEnv=0;
+let comets=[], lastComet=-99;
 
 function draw(t){
   const dt=Math.min(0.05,(t-last)/1000||0); last=t;
@@ -278,78 +288,103 @@ function draw(t){
   act+=((live?1:0)-act)*0.02;
 
   const react=parseFloat(reactEl.value), spk=parseFloat(sparkleEl.value), spin=parseFloat(spinEl.value);
-  rot+=(0.028 + feat.mid*0.30*react)*dt*spin*(0.25+0.75*act);
+  // spin slider = RPM cap (max 2 RPM); audio sways within it, never past it
+  const rotMax=spin*TAU/60;
+  rot+=rotMax*(0.3+0.7*act)*(0.5+0.5*clamp(feat.mid,0,1))*dt;
 
   ctx.globalCompositeOperation='source-over';
   ctx.fillStyle='#040308'; ctx.fillRect(0,0,W,H);
   ctx.globalCompositeOperation='lighter';
 
   const breathe=1 + 0.07*feat.low*react;
-  const diff=u=>-rot*(1.65-0.95*u);                // counter-clockwise, arms trailing; core leads
+  const rotNow=-rot;                               // rigid rotation: the pattern turns as one,
+                                                   // counter-clockwise, arms trailing — no wind-up
+  // pitch colour temperature: deep gong -> warm amber, bright shimmer -> cool blue-violet
+  const wt=clamp(1-feat.bloom,0,1);
+  const tR=148+107*wt, tG=168+40*wt, tB=255-115*wt;
 
-  // ---- nebula wisps ----
-  for(const wsp of wisps){
-    const rad=wsp.u*Rg*breathe, ang=wsp.ang+diff(wsp.u);
-    const x=cx+Math.cos(ang)*rad, y=cy+Math.sin(ang)*rad;
-    const s=wsp.sz*DPR*(0.8+0.5*feat.level*react);
-    const a=wsp.a*(0.35+0.65*act)*(0.6+0.8*feat.level*react);
-    const ng=ctx.createRadialGradient(x,y,0,x,y,s);
-    ng.addColorStop(0,'rgba('+wsp.cr+','+wsp.cg+','+wsp.cb+','+a+')');
-    ng.addColorStop(1,'rgba('+wsp.cr+','+wsp.cg+','+wsp.cb+',0)');
-    ctx.fillStyle=ng; ctx.fillRect(x-s,y-s,s*2,s*2);
-  }
-
-  // ---- core: white heart flaring on strikes, violet halo breathing with level ----
+  // ---- core: white heart flaring on strikes, tinted halo breathing with level ----
   coreEnv += (feat.kick*1.1+feat.level*0.3-coreEnv)*(feat.kick>coreEnv?0.5:0.03);
   const coreR=Rg*(0.16+0.10*clamp(coreEnv,0,1.4))*breathe;
   const cg1=ctx.createRadialGradient(cx,cy,0,cx,cy,coreR);
   cg1.addColorStop(0,'rgba(255,252,244,'+(0.55+0.4*clamp(coreEnv,0,1))+')');
-  cg1.addColorStop(0.5,'rgba(216,196,255,'+(0.28+0.3*clamp(coreEnv,0,1))+')');
+  cg1.addColorStop(0.5,'rgba('+Math.round(216+(255-216)*wt*0.5)+','+Math.round(196-30*wt*0.5)+','+Math.round(255-90*wt*0.5)+','+(0.28+0.3*clamp(coreEnv,0,1))+')');
   cg1.addColorStop(1,'rgba(160,130,255,0)');
   ctx.fillStyle=cg1; ctx.fillRect(cx-coreR,cy-coreR,coreR*2,coreR*2);
   const haloR=Rg*(0.62+0.25*clamp(coreEnv,0,1.4));
+  const hR=Math.round(150+(255-150)*wt*0.5), hG=Math.round(120+(190-120)*wt*0.5), hB=Math.round(255+(120-255)*wt*0.5);
   const cg2=ctx.createRadialGradient(cx,cy,0,cx,cy,haloR);
-  cg2.addColorStop(0,'rgba(150,120,255,'+(0.10+0.14*feat.level*react)+')');
-  cg2.addColorStop(1,'rgba(90,60,200,0)');
+  cg2.addColorStop(0,'rgba('+hR+','+hG+','+hB+','+(0.10+0.14*feat.level*react)+')');
+  cg2.addColorStop(1,'rgba('+Math.round(hR*0.6)+','+Math.round(hG*0.5)+','+Math.round(hB*0.8)+',0)');
   ctx.fillStyle=cg2; ctx.fillRect(cx-haloR,cy-haloR,haloR*2,haloR*2);
 
-  // ---- strike waves: a ring of light sweeping outward, igniting stars as it passes ----
+  // ---- strike waves: light rolling slowly outward along the arms ----
   if(feat.kick>0.3 && (!waves.length || waves[waves.length-1].r>Rg*0.18))
-    waves.push({r:Rg*0.06, v:Rg*(0.9+0.5*feat.kick), life:1});
+    waves.push({r:Rg*0.06, v:Rg*(0.45+0.25*feat.kick), life:1});
   for(let i=waves.length-1;i>=0;i--){
-    const w=waves[i]; w.r+=w.v*dt; w.life-=dt*0.55;
+    const w=waves[i]; w.r+=w.v*dt; w.life-=dt*0.35;
     if(w.life<=0) waves.splice(i,1);
   }
-  const band=Rg*0.09;
+  const band=Rg*0.11;
 
   // ---- stars ----
-  const twGain=(0.25+feat.high*react*5)*spk;       // shimmer drives the glitter
+  const twGain=(0.25+feat.high*5.5)*spk;           // Sparkle owns the glitter
   const heroes=[];
   for(const st of stars){
-    const rad=st.u*Rg*breathe, ang=st.ang+diff(st.u);
+    const rad=st.u*Rg*breathe, ang=st.ang+rotNow;
     const x=cx+Math.cos(ang)*rad, y=cy+Math.sin(ang)*rad;
-    st.tw+=dt*st.twSp*(1+feat.high*react*5*spk);
+    st.tw+=dt*st.twSp*(1+feat.high*5.5*spk);
     let a=st.base*(0.30+0.70*act)*(0.35+0.65*(0.5+0.5*Math.sin(st.tw))*clamp(twGain,0,1.6));
-    for(const w of waves){
+    if(!st.halo) for(const w of waves){            // the wave flows along the arms only
       const d=Math.abs(rad-w.r);
       if(d<band) a+=w.life*(1-d/band)*0.85;
     }
     if(a<=0.02) continue;
     a=clamp(a,0,1);
     const c=st.col;
-    ctx.fillStyle='rgba('+c[0]+','+c[1]+','+c[2]+','+a+')';
+    const r=(c[0]+(tR-c[0])*0.38)|0, g=(c[1]+(tG-c[1])*0.38)|0, b=(c[2]+(tB-c[2])*0.38)|0;
+    ctx.fillStyle='rgba('+r+','+g+','+b+','+a+')';
     ctx.fillRect(x-st.sz/2,y-st.sz/2,st.sz,st.sz);
-    if(st.hero && a>0.45) heroes.push({x,y,a,c,s:st.sz});
+    if(st.hero && a>0.45) heroes.push({x,y,a,r,g,b,s:st.sz});
   }
   // cross glints on the brightest stars — the actual "sparkle"
   ctx.lineWidth=1*DPR;
   for(const h of heroes){
-    const len=h.s*(2.6+3*feat.high*react*spk);
-    ctx.strokeStyle='rgba('+h.c[0]+','+h.c[1]+','+h.c[2]+','+(h.a*0.7)+')';
+    const len=h.s*(2.6+3.3*feat.high*spk);
+    ctx.strokeStyle='rgba('+h.r+','+h.g+','+h.b+','+(h.a*0.7)+')';
     ctx.beginPath();
     ctx.moveTo(h.x-len,h.y); ctx.lineTo(h.x+len,h.y);
     ctx.moveTo(h.x,h.y-len); ctx.lineTo(h.x,h.y+len);
     ctx.stroke();
+  }
+
+  // ---- dust lanes: dark filaments occluding the glow, riding the same rotation ----
+  ctx.globalCompositeOperation='source-over';
+  ctx.save(); ctx.translate(cx,cy); ctx.rotate(rotNow); ctx.scale(breathe,breathe);
+  ctx.drawImage(dustC,-dustS/2,-dustS/2);
+  ctx.restore();
+  ctx.globalCompositeOperation='lighter';
+
+  // ---- shooting stars: a streak across the field on the heaviest strikes ----
+  if(feat.kick>1.0 && act>0.5 && t/1000-lastComet>6){
+    lastComet=t/1000;
+    const sa=Math.random()*TAU, sp=Rg*(0.75+0.4*Math.random());
+    const ha=sa+Math.PI+(Math.random()-0.5)*0.9;
+    comets.push({x:cx+Math.cos(sa)*Rg*0.95, y:cy+Math.sin(sa)*Rg*0.95,
+                 vx:Math.cos(ha)*sp, vy:Math.sin(ha)*sp, life:1});
+  }
+  for(let i=comets.length-1;i>=0;i--){
+    const cm=comets[i]; cm.x+=cm.vx*dt; cm.y+=cm.vy*dt; cm.life-=dt*0.32;
+    if(cm.life<=0){ comets.splice(i,1); continue; }
+    const tx=cm.x-cm.vx*0.25, ty=cm.y-cm.vy*0.25;
+    const lg=ctx.createLinearGradient(tx,ty,cm.x,cm.y);
+    lg.addColorStop(0,'rgba(255,240,214,0)');
+    lg.addColorStop(1,'rgba(255,240,214,'+(0.9*cm.life)+')');
+    ctx.strokeStyle=lg; ctx.lineWidth=2.2*DPR;
+    ctx.beginPath(); ctx.moveTo(tx,ty); ctx.lineTo(cm.x,cm.y); ctx.stroke();
+    const hg=ctx.createRadialGradient(cm.x,cm.y,0,cm.x,cm.y,9*DPR);
+    hg.addColorStop(0,'rgba(255,250,235,'+(0.95*cm.life)+')'); hg.addColorStop(1,'rgba(255,250,235,0)');
+    ctx.fillStyle=hg; ctx.fillRect(cm.x-9*DPR,cm.y-9*DPR,18*DPR,18*DPR);
   }
 
   if(t-hudT>140){ updateHUD(); hudT=t; }
@@ -368,6 +403,7 @@ function loopFeat(){ analyze(); setTimeout(loopFeat,1000/60); }
 function resize(){
   W=Math.floor(innerWidth*DPR); H=Math.floor(innerHeight*DPR);
   cvs.width=W; cvs.height=H; cx=W/2; cy=H/2; Rg=Math.min(W,H)*0.46;
+  buildDust();
 }
 addEventListener('resize',resize);
 
