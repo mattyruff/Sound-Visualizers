@@ -257,7 +257,9 @@ function draw(t){
   act+=((live?1:0)-act)*0.02;
 
   const react=parseFloat(reactEl.value), g=parseFloat(glowEl.value)*(0.55+0.6*act), spin=parseFloat(spinEl.value);
-  rot+=(0.012 + feat.mid*0.4)*dt*spin*(0.3+act);
+  // spin slider = RPM cap (max 2 RPM); audio sways within it, never past it
+  const rotMax=spin*TAU/60;
+  rot+=rotMax*(0.3+0.7*act)*(0.5+0.5*clamp(feat.mid,0,1))*dt;
 
   // void
   ctx.globalCompositeOperation='source-over';
@@ -331,7 +333,7 @@ function draw(t){
   const sr=R*(1.62+0.1*feat.low);
   ctx.shadowBlur=8*g; ctx.shadowColor='#f5c542';
   for(const s of sparks){
-    s.a+=s.sp*dt*spin*(0.4+act); s.tw+=dt*4;
+    s.a+=s.sp*dt*spin*(0.4+act)*0.15; s.tw+=dt*4;
     const tw=(0.5+0.5*Math.sin(s.tw))*(0.3+feat.high*react*3)*act;
     if(tw<0.02) continue;
     for(let k=0;k<6;k++){
