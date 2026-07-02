@@ -278,7 +278,7 @@ function draw(t){
   ctx.globalCompositeOperation='lighter';
 
   const breathe=1 + 0.07*feat.low*react;
-  const diff=u=>rot*(1.65-0.95*u);                 // differential rotation: core leads
+  const diff=u=>-rot*(1.65-0.95*u);                // counter-clockwise, arms trailing; core leads
 
   // ---- nebula wisps ----
   for(const wsp of wisps){
