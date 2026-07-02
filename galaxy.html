@@ -307,7 +307,7 @@ function draw(t){
   ctx.fillStyle=cg2; ctx.fillRect(cx-haloR,cy-haloR,haloR*2,haloR*2);
 
   // ---- strike waves: a ring of light sweeping outward, igniting stars as it passes ----
-  if(feat.kick>0.5 && (!waves.length || waves[waves.length-1].r>Rg*0.18))
+  if(feat.kick>0.3 && (!waves.length || waves[waves.length-1].r>Rg*0.18))
     waves.push({r:Rg*0.06, v:Rg*(0.9+0.5*feat.kick), life:1});
   for(let i=waves.length-1;i>=0;i--){
     const w=waves[i]; w.r+=w.v*dt; w.life-=dt*0.55;

@@ -265,19 +265,22 @@ function draw(t){
 
   // ---- violet breath (BEHIND the gold): exhale outward on a strike, inhale back to centre ----
   // ambient residual that lingers and fades with the gong's decay
-  const vTarget = feat.kick*1.0 + feat.level*0.26;
+  const vTarget = feat.kick*1.2 + feat.level*0.55;
   violetEnv += (vTarget-violetEnv) * (vTarget>violetEnv ? 0.4 : 0.02);
   const bi=clamp(violetEnv,0,1)*react;
   const baseR=R0*(2.2+violetEnv*1.2);
   const bg=ctx.createRadialGradient(cx,cy,0,cx,cy,baseR);
-  bg.addColorStop(0,'rgba(128,82,238,'+(0.14*bi)+')'); bg.addColorStop(1,'rgba(70,30,150,0)');
+  bg.addColorStop(0,'rgba(128,82,238,'+(0.22*bi)+')'); bg.addColorStop(1,'rgba(70,30,150,0)');
   ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
   // each strike spawns a slow breath: radius 0->peak->0; colour lighter(soft)->darker(heavy); lingers longer when heavy
   const edge=Math.hypot(W,H)*0.5;            // reach the screen corners on the biggest strikes
-  if(feat.kick>0.5 && (!breaths.length || breaths[breaths.length-1].age>0.45)){
-    const strength=clamp(feat.kick/1.8,0,1);
-    // pale lavender (soft) -> deep saturated violet (heavy)
-    const cr=Math.round(192+(90-192)*strength), cg=Math.round(162+(38-162)*strength), cb=Math.round(255+(178-255)*strength);
+  if(feat.kick>0.22 && (!breaths.length || breaths[breaths.length-1].age>0.45)){
+    const strength=clamp(feat.kick/1.4,0,1);
+    // pale lavender (soft) -> deep saturated violet (heavy); pitch pulls toward magenta
+    const pk=feat.bloom;
+    const cr=clamp(Math.round(192+(90-192)*strength+52*pk),0,255),
+          cg=clamp(Math.round(162+(38-162)*strength+12*pk),0,255),
+          cb=Math.round(255+(178-255)*strength);
     breaths.push({age:0, dur:3.0+strength*5.5, strength, peak:R0*2.2+strength*edge*1.05, cr,cg,cb});
     if(breaths.length>5) breaths.shift();
   }
@@ -287,7 +290,7 @@ function draw(t){
     if(p>=1){ breaths.splice(i,1); continue; }
     const env=Math.sin(p*Math.PI);           // 0 ->1 ->0 : expand then contract
     const rad=Math.max(2,b.peak*env);
-    const a=(0.11+0.20*b.strength)*env*react;
+    const a=(0.17+0.30*b.strength)*env*react;
     const c=b.cr+','+b.cg+','+b.cb;
     const rg=ctx.createRadialGradient(cx,cy,0,cx,cy,rad);
     rg.addColorStop(0,   'rgba('+c+','+a+')');
@@ -313,7 +316,7 @@ function draw(t){
   ctx.restore();
 
   // strike waves — light expanding through the geometry
-  if(feat.kick>0.5 && (!waves.length || waves[waves.length-1].r>R*0.25))
+  if(feat.kick>0.3 && (!waves.length || waves[waves.length-1].r>R*0.25))
     waves.push({r:R*0.2, v:R*(2.4+feat.kick), life:1});
   ctx.shadowBlur=12*g; ctx.shadowColor='#ffe9a8';
   for(let i=waves.length-1;i>=0;i--){
