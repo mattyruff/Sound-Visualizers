@@ -105,7 +105,6 @@
   </button>
   <div class="sep"></div>
   <div class="ctl"><label>React</label><input type="range" id="react" min="0.3" max="2.5" step="0.05" value="1.1"></div>
-  <div class="ctl"><label>Glow</label><input type="range" id="glow" min="0.4" max="6" step="0.1" value="1"></div>
   <div class="ctl"><label>Weave</label><input type="range" id="weave" min="0.1" max="1.6" step="0.02" value="0.6"></div>
   <div class="ctl"><label>Spin</label><input type="range" id="spin" min="0" max="2" step="0.05" value="1"></div>
   <div class="sep"></div>
@@ -234,17 +233,17 @@ function gstrokeG(a){
 }
 
 // torus geometry (head-on, down the axis). r near R closes the hole to a tight central swirl.
-const TR=1.0, Tr=0.965;          // ring / tube radii
+const TR=1.0, Tr=0.93;           // ring / tube radii (gap = TR-Tr sets the centre hole)
 const NPET=26, MSEG=150;         // windings per family, segments per winding
 
 function draw(t){
   const dt=Math.min(0.05,(t-last)/1000||0); last=t;
   const live=(mode==='mic')||(mode==='file'&&filePlaying);
   act+=((live?1:0)-act)*0.02;
-  const react=parseFloat(reactEl.value), g=parseFloat(glowEl.value),
+  const react=parseFloat(reactEl.value), g=1,
         weave=parseFloat(weaveEl.value), spin=parseFloat(spinEl.value);
 
-  spinAng += 0.085*spin*dt*(0.4+0.6*act);
+  spinAng += 0.017*spin*dt*(0.4+0.6*act);
 
   // ============ LAYER 1 — emerald floor (NORMAL compositing: saturated, cannot wash) ============
   ctx.globalCompositeOperation='source-over';
@@ -254,14 +253,17 @@ function draw(t){
   emEnv += (eT-emEnv)*(eT>emEnv?0.4:0.02);
   emStr += (clamp(feat.kick/1.8,0,1)-emStr)*0.16;
   emPulse = emPulse*0.945 + feat.kick*0.09;
-  const emR=R0*(1.7+2.6*clamp(emPulse,0,1.3));
+  // bloom sweeps from the core out to the torus rim at peak — never beyond it
+  const plateR=Math.min(W,H)*0.44;
+  const emR=plateR*(0.30+0.70*clamp(emPulse,0,1));
   // colour: pale jade (soft, bright pitch) -> deep dark emerald (heavy, low pitch)
   const s=clamp(0.55*emStr + 0.6*(1-feat.bloom), 0, 1);
-  const cr=Math.round(74+(6-74)*s), cg=Math.round(214+(86-214)*s), cb=Math.round(150+(54-150)*s);
-  const A=clamp((0.20+1.05*emEnv)*(0.22+0.78*act),0,0.96);
+  const cr=Math.round(52+(2-52)*s), cg=Math.round(208+(64-208)*s), cb=Math.round(138+(38-138)*s);
+  const A=clamp((0.22+1.05*emEnv)*(0.22+0.78*act),0,0.97);
   const eg=ctx.createRadialGradient(cx,cy,0,cx,cy,emR);
   eg.addColorStop(0,   'rgba('+cr+','+cg+','+cb+','+A+')');
-  eg.addColorStop(0.42,'rgba('+Math.round(cr*0.5)+','+Math.round(cg*0.55)+','+Math.round(cb*0.52)+','+(A*0.5)+')');
+  eg.addColorStop(0.55,'rgba('+Math.round(cr*0.6)+','+Math.round(cg*0.62)+','+Math.round(cb*0.6)+','+(A*0.6)+')');
+  eg.addColorStop(0.85,'rgba('+Math.round(cr*0.4)+','+Math.round(cg*0.45)+','+Math.round(cb*0.42)+','+(A*0.28)+')');
   eg.addColorStop(1,   'rgba(3,16,10,0)');
   ctx.fillStyle=eg; ctx.fillRect(0,0,W,H);
 
@@ -269,7 +271,7 @@ function draw(t){
   gctx.setTransform(1,0,0,1,0,0);
   gctx.clearRect(0,0,W,H);
   gctx.globalCompositeOperation='lighter';
-  const plateR=Math.min(W,H)*0.44, S=plateR/(TR+Tr);
+  const S=plateR/(TR+Tr);
   const shear=weave*(1+0.05*feat.kick);
   const amp=(0.18+0.82*act)*(0.5+0.8*clamp(feat.level*react,0,1)) + feat.kick*0.3*act;
   for(let fam=0;fam<2;fam++){
@@ -326,7 +328,7 @@ function resize(){
 addEventListener('resize',resize);
 
 // ---------- UI ----------
-const reactEl=document.getElementById('react'), glowEl=document.getElementById('glow'),
+const reactEl=document.getElementById('react'),
       weaveEl=document.getElementById('weave'), spinEl=document.getElementById('spin');
 const hWv=document.getElementById('hWv'), hHz=document.getElementById('hHz'), hLvl=document.getElementById('hLvl');
 const veil=document.getElementById('veil'), dock=document.getElementById('dock'), hud=document.getElementById('hud'), nav=document.getElementById('nav');
