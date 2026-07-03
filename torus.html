@@ -174,12 +174,21 @@ async function useFile(file){
   }catch(err){ console.error(err); alert('Could not decode "'+file.name+'".\nTry MP3, M4A/AAC, WAV, OGG, FLAC.'); }
 }
 function stopMic(){ disconnectSrc(); mode='idle'; syncPlay(); }
+let micPending=false;
 async function useMic(){
+  if(micPending) return;                          // ignore clicks while the prompt is open
   if(mode==='mic'){ stopMic(); return; }          // second tap turns the mic off
+  micPending=true;
+  const vb=document.getElementById('vMic'), vTxt=vb.textContent;
+  vb.textContent='Connecting\u2026';
+  // request the mic FIRST, synchronously inside the tap gesture — iOS Safari can
+  // drop the gesture (and the request) if an await runs before getUserMedia
+  let stream;
+  try{ stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}}); }
+  catch(e){ micPending=false; vb.textContent=vTxt; mode='idle'; syncPlay(); alert('Mic unavailable — check browser permissions.'); return; }
+  micPending=false; vb.textContent=vTxt;
   ensureCtx(); await actx.resume(); disconnectSrc();
-  try{ micStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}}); }
-  catch(e){ mode='idle'; syncPlay(); alert('Mic unavailable — check browser permissions.'); return; }
-  mode='mic';
+  micStream=stream; mode='mic';
   srcNode=actx.createMediaStreamSource(micStream); srcNode.connect(analyser);
   reveal(); syncPlay();
 }
