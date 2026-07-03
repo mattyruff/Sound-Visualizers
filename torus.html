@@ -243,12 +243,14 @@ function analyze(){
 }
 
 // ---------- render ----------
-let spinAng=0, act=0, last=0, emEnv=0, emStr=0, emPulse=0;
+let spinAng=0, act=0, last=0, emEnv=0, emStr=0, emPulse=0, haloC=null, haloX=null;
 
 // gold lines drawn onto the ISOLATED layer (gctx). Warm core so the bloom stays golden, not white.
+// past full alpha the surge keeps growing by widening the strokes (lines may merge at max shine)
 function gstrokeG(a){
-  gctx.strokeStyle='rgba(214,168,72,'+(0.42*a)+')'; gctx.lineWidth=2.6*DPR; gctx.stroke();
-  gctx.strokeStyle='rgba(255,226,150,'+(0.95*a)+')'; gctx.lineWidth=1.1*DPR; gctx.stroke();
+  const w=0.7+0.45*Math.min(a,2);
+  gctx.strokeStyle='rgba(214,168,72,'+(0.42*a)+')'; gctx.lineWidth=2.6*DPR*w; gctx.stroke();
+  gctx.strokeStyle='rgba(255,226,150,'+(0.95*a)+')'; gctx.lineWidth=1.1*DPR*w; gctx.stroke();
 }
 
 // torus geometry (head-on, down the axis). r near R closes the hole to a tight central swirl.
@@ -297,9 +299,9 @@ function draw(t){
   gctx.globalCompositeOperation='lighter';
   const S=plateR/(TR+Tr);
   const shear=weave*(1+0.05*feat.kick);
-  // shine: low = minimal steady glow, high = volume surges the threads to the original peak
-  const amp=(0.18+0.82*act)*(0.12+0.18*shine + (0.20+0.75*shine)*clamp(feat.level*2.2,0,1))
-            + feat.kick*0.3*act*(0.5+0.5*shine);
+  // shine: low = minimal steady glow, high = volume surges the threads (1.5x peak)
+  const amp=(0.18+0.82*act)*(0.12+0.28*shine + (0.25+1.30*shine)*clamp(feat.level*2.2,0,1))
+            + feat.kick*0.3*act*(0.5+shine);
   for(let fam=0;fam<2;fam++){
     const dir=fam?-1:1, phase=fam?Math.PI/NPET:0;
     for(let i=0;i<NPET;i++){
@@ -319,9 +321,17 @@ function draw(t){
   // ============ LAYER 3 — composite gold as bloom: soft blurred halo + crisp lines ==============
   // soft additive halo (restrained, so it only kisses the emerald near the lines)
   ctx.globalCompositeOperation='lighter';
-  ctx.globalAlpha=clamp(0.18+0.22*shine,0,0.7);
-  if(supportsFilter&&!MOBILE){ ctx.filter='blur('+Math.min(20,(3+2.4*shine))+'px)'; ctx.drawImage(gc,0,0); ctx.filter='none'; }
-  else { ctx.drawImage(gc,0,0); }
+  ctx.globalAlpha=clamp(0.22+0.33*shine,0,0.7);
+  if(supportsFilter&&!MOBILE){ ctx.filter='blur('+Math.min(20,(3.5+4.5*shine))+'px)'; ctx.drawImage(gc,0,0); ctx.filter='none'; }
+  else {
+    // phones: cheap halo — bounce the gold layer through a quarter-res canvas
+    // (bilinear up-scale ≈ free blur) instead of skipping the bloom entirely
+    if(!haloC){ haloC=document.createElement('canvas'); haloX=haloC.getContext('2d'); }
+    if(haloC.width!==W>>2||haloC.height!==H>>2){ haloC.width=W>>2; haloC.height=H>>2; }
+    haloX.clearRect(0,0,haloC.width,haloC.height);
+    haloX.drawImage(gc,0,0,haloC.width,haloC.height);
+    ctx.drawImage(haloC,0,0,W,H);
+  }
   // crisp colour-true lines on top
   ctx.globalAlpha=1;
   ctx.globalCompositeOperation='source-over';
