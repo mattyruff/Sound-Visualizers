@@ -123,8 +123,8 @@ const clamp=(v,a,b)=>v<a?a:(v>b?b:v);
 const cvs=document.getElementById('c'), ctx=cvs.getContext('2d');
 const gc=document.createElement('canvas'), gctx=gc.getContext('2d');   // isolated gold layer
 const supportsFilter = (()=>{ try{ ctx.filter='blur(1px)'; const ok=ctx.filter!=='none'; ctx.filter='none'; return ok; }catch(e){ return false; } })();
-let W=0,H=0,cx=0,cy=0,R0=0,DPR=Math.min(2,window.devicePixelRatio||1);
 const MOBILE=matchMedia('(pointer:coarse)').matches||(navigator.maxTouchPoints>0&&Math.min(screen.width||1024,screen.height||768)<=820);
+let W=0,H=0,cx=0,cy=0,R0=0,DPR=Math.min(MOBILE?1.4:2,window.devicePixelRatio||1);
 const FRAME_MS=MOBILE?33:0;                      // ~30fps cap on phones
 let lastDraw=0, rafLive=true;
 
@@ -237,7 +237,7 @@ function gstrokeG(a){
 
 // torus geometry (head-on, down the axis). r near R closes the hole to a tight central swirl.
 const TR=1.0, Tr=0.93;           // ring / tube radii (gap = TR-Tr sets the centre hole)
-const NPET=26, MSEG=150;         // windings per family, segments per winding
+const NPET=26, MSEG=MOBILE?90:150;   // windings per family, segments per winding (coarser on phones)
 
 function draw(t){
   if(document.hidden){ rafLive=false; return; }    // pause fully when backgrounded
