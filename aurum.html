@@ -172,10 +172,13 @@ async function useFile(file){
     reveal(); syncPlay();
   }catch(err){ console.error(err); alert('Could not decode "'+file.name+'".\nTry MP3, M4A/AAC, WAV, OGG, FLAC.'); }
 }
+function stopMic(){ disconnectSrc(); mode='idle'; syncPlay(); }
 async function useMic(){
-  ensureCtx(); await actx.resume(); disconnectSrc(); mode='mic';
+  if(mode==='mic'){ stopMic(); return; }          // second tap turns the mic off
+  ensureCtx(); await actx.resume(); disconnectSrc();
   try{ micStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}}); }
-  catch(e){ alert('Mic unavailable — check browser permissions.'); return; }
+  catch(e){ mode='idle'; syncPlay(); alert('Mic unavailable — check browser permissions.'); return; }
+  mode='mic';
   srcNode=actx.createMediaStreamSource(micStream); srcNode.connect(analyser);
   reveal(); syncPlay();
 }
@@ -389,7 +392,7 @@ document.getElementById('vMic').onclick=useMic;
 document.getElementById('dMic').onclick=useMic;
 document.getElementById('vSample').onclick=useSample;
 document.getElementById('dSample').onclick=useSample;
-document.getElementById('dPlay').onclick=()=>{ if(mode==='file'){ filePlaying?stopBuf():startBuf(); } syncPlay(); };
+document.getElementById('dPlay').onclick=()=>{ if(mode==='file'){ filePlaying?stopBuf():startBuf(); syncPlay(); } else if(mode==='mic'){ stopMic(); } };
 document.getElementById('dFull').onclick=()=>{ if(!document.fullscreenElement) document.documentElement.requestFullscreen?.(); else document.exitFullscreen?.(); };
 
 ['dragover','drop'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault()));
