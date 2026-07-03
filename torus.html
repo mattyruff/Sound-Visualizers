@@ -208,7 +208,7 @@ function syncPlay(){
 }
 
 // ---------- features ----------
-const feat={level:0,centroid:600,low:0,mid:0,high:0,kick:0,prevLvl:0,bloom:0};
+const feat={level:0,centroid:600,low:0,mid:0,high:0,kick:0,prevLvl:0,slowLvl:0,bloom:0};
 function analyze(){
   if(!analyser){ feat.level=0; feat.kick*=0.9; return; }
   analyser.getByteFrequencyData(freqBytes);
@@ -227,11 +227,14 @@ function analyze(){
   flux/=(i1-i0)*255;                       // mean positive spectral change per bin
   const centroid = den>0.001 ? num/den : feat.centroid;
   // onset = level rise (clean strikes) OR spectral flux (strikes masked by a
-  // still-decaying previous strike, which only ever loses spectral energy)
-  const rise=lvl-feat.prevLvl;
-  const onset=Math.max(rise*8, (flux-0.005)*55);
+  // still-decaying previous strike, which only ever loses spectral energy) OR
+  // swell above a slow baseline (soft mallet strikes whose attack is spread
+  // over ~0.5s — too gradual for per-frame rise, too narrowband for flux)
+  const rise=lvl-feat.prevLvl, swell=lvl-feat.slowLvl;
+  const onset=Math.max(rise*8, (flux-0.005)*55, swell*5);
   if(onset>0.3 && lvl>0.05) feat.kick=Math.min(1.8,feat.kick+onset);
   feat.kick*=0.92; feat.prevLvl=feat.prevLvl*0.6+lvl*0.4;
+  feat.slowLvl=feat.slowLvl*0.985+lvl*0.015;
   feat.level+=(lvl-feat.level)*0.22;
   feat.low+=(low*0.02-feat.low)*0.18; feat.mid+=(mid*0.012-feat.mid)*0.12; feat.high+=(high*0.01-feat.high)*0.2;
   feat.centroid+=(centroid-feat.centroid)*0.07;
