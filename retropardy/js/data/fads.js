@@ -35,7 +35,7 @@ window.RETRO_BANK.push(
 {cat:"Fads & Fashion",d:2,q:"\"Cowabunga!\" became late-80s kid slang mostly thanks to which franchise?",c:["Alvin and the Chipmunks","Teenage Mutant Ninja Turtles","Biker Mice from Mars"],a:1},
 {cat:"Fads & Fashion",d:2,q:"During the grunge era, what did kids famously tie around their waists?",c:["A flannel shirt","A windbreaker","A denim vest"],a:0},
 {cat:"Fads & Fashion",d:2,q:"The brand Rollerblade turned which activity into an early-90s craze?",c:["Skateboarding","Snowboarding","Inline skating"],a:2},
-{cat:"Fads & Fashion",d:2,q:"Which game came packed in with the Game Boy at its 1989 US launch?",c:["Super Mario Land","Tetris","Dr. Mario"],a:1},
+{cat:"Fads & Fashion",d:2,q:"The Reebok Pump sneaker, released in 1989, let wearers do what?",c:["Inflate the shoe for a snug fit","Light up the soles with each step","Swap out colored side panels"],a:0},
 {cat:"Fads & Fashion",d:2,q:"Lisa Frank ruled early-90s school supplies with what signature style?",c:["Glow-in-the-dark skulls","Neon rainbow animals like unicorns and dolphins","Black-and-white checkerboards"],a:1},
 {cat:"Fads & Fashion",d:2,q:"What was the name of the diner hangout on Saved by the Bell?",c:["The Peach Pit","Central Perk","The Max"],a:2},
 {cat:"Fads & Fashion",d:2,q:"MC Hammer's \"U Can't Touch This\" (1990) built its hook from which Rick James song?",c:["Super Freak","Brick House","Word Up"],a:0},
