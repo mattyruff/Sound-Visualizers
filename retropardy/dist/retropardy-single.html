@@ -1,0 +1,2016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#060ce9">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>RETROPARDY! 1985&ndash;1995</title>
+</head>
+<body>
+<style>
+/* ═══════════════════════════════════════════════════════════
+   RETROPARDY! — 1985–1995
+   Classic game-show blue + gold, with a light CRT patina.
+   No external assets. Everything works offline from file://.
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  --blue-deep:  #04053a;
+  --blue-board: #060ce9;
+  --blue-cell1: #0a10d8;
+  --blue-cell2: #050a9e;
+  --blue-clue:  #0b11c9;
+  --gold:       #ffcc4d;
+  --gold-deep:  #e0a020;
+  --ink:        #ffffff;
+  --good:       #2fe07c;
+  --bad:        #ff5470;
+  --pink:       #ff3ec8;
+  --cyan:       #27e0ff;
+  --font-value: "Haettenschweiler", "Impact", "Arial Narrow", sans-serif;
+  --font-clue:  Georgia, "Times New Roman", serif;
+  --font-ui:    "Verdana", "Geneva", sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  background: radial-gradient(120% 120% at 50% -10%, #10165e 0%, var(--blue-deep) 55%, #02021c 100%);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  touch-action: manipulation;          /* no double-tap zoom on rapid answer taps */
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+           env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+.hidden { display: none !important; }
+
+.screen {
+  min-height: 100vh;
+  width: 100%;
+  position: relative;
+}
+
+/* ── CRT patina ─────────────────────────────────────────── */
+#scanlines {
+  pointer-events: none;
+  position: fixed; inset: 0; z-index: 90;
+  background:
+    repeating-linear-gradient(0deg, rgba(0,0,0,.11) 0 1px, transparent 1px 3px);
+  mix-blend-mode: multiply;
+}
+#scanlines::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: radial-gradient(115% 115% at 50% 50%, transparent 62%, rgba(0,0,10,.5) 100%);
+}
+
+/* ── Splash ─────────────────────────────────────────────── */
+#splash, #results {
+  display: flex; align-items: center; justify-content: center;
+  text-align: center;
+}
+
+.splash-grid {
+  position: absolute; inset: auto 0 0 0; height: 42vh;
+  background:
+    linear-gradient(to top, rgba(255,62,200,.28), transparent 70%),
+    repeating-linear-gradient(90deg, rgba(39,224,255,.16) 0 1px, transparent 1px 72px),
+    repeating-linear-gradient(0deg,  rgba(39,224,255,.16) 0 1px, transparent 1px 34px);
+  transform: perspective(340px) rotateX(58deg);
+  transform-origin: bottom;
+  opacity: .8;
+}
+
+.splash-inner { position: relative; z-index: 2; padding: 48px 24px; max-width: 780px; }
+
+.splash-kicker {
+  font-size: 13px; letter-spacing: .5em; color: var(--cyan);
+  text-transform: uppercase; margin-bottom: 18px;
+}
+
+.logo {
+  font-family: var(--font-value);
+  font-size: clamp(64px, 12vw, 128px);
+  line-height: .92;
+  letter-spacing: .02em;
+  color: var(--gold);
+  text-shadow:
+    0 2px 0 var(--gold-deep),
+    0 5px 0 #7a4d00,
+    0 10px 24px rgba(0,0,0,.6);
+}
+.logo span { color: var(--ink); }
+.small-logo { font-size: clamp(44px, 8vw, 84px); }
+
+.splash-years {
+  margin-top: 14px;
+  font-family: var(--font-value);
+  font-size: clamp(20px, 3.4vw, 30px);
+  letter-spacing: .35em;
+  color: var(--pink);
+}
+
+.splash-tag { margin-top: 12px; color: #aeb6ff; font-size: 14px; }
+
+.player-pick { margin: 38px 0 8px; }
+.pick-label { font-size: 11px; letter-spacing: .4em; color: #8f97e8; margin-bottom: 10px; }
+.pick-btns { display: flex; gap: 12px; justify-content: center; }
+.pick-btn {
+  width: 58px; height: 58px;
+  font-family: var(--font-value); font-size: 30px;
+  color: var(--ink); background: var(--blue-cell2);
+  border: 2px solid #3a42ff; border-radius: 10px;
+  cursor: pointer; transition: transform .1s, background .15s, border-color .15s;
+}
+.pick-btn:hover { transform: translateY(-2px); }
+.pick-btn.selected { background: var(--gold); color: #241500; border-color: var(--gold); }
+
+.big-btn {
+  margin-top: 26px;
+  font-family: var(--font-value);
+  font-size: 30px; letter-spacing: .08em;
+  color: #241500; background: linear-gradient(180deg, #ffe28a, var(--gold) 55%, var(--gold-deep));
+  border: none; border-radius: 12px;
+  padding: 16px 44px; cursor: pointer;
+  box-shadow: 0 6px 0 #8a5c00, 0 14px 30px rgba(0,0,0,.5);
+  transition: transform .08s, box-shadow .08s;
+}
+.big-btn:hover  { transform: translateY(-2px); box-shadow: 0 8px 0 #8a5c00, 0 18px 34px rgba(0,0,0,.5); }
+.big-btn:active { transform: translateY(3px);  box-shadow: 0 3px 0 #8a5c00, 0 8px 18px rgba(0,0,0,.5); }
+.big-btn.small  { font-size: 22px; padding: 12px 34px; }
+
+.splash-foot { margin-top: 34px; font-size: 12px; color: #7d85d8; display: flex; gap: 18px; justify-content: center; align-items: center; }
+.link-btn { background: none; border: none; color: #7d85d8; text-decoration: underline; cursor: pointer; font-size: 12px; }
+.link-btn:hover { color: var(--cyan); }
+
+/* ── Top bar ────────────────────────────────────────────── */
+#game { display: flex; flex-direction: column; height: 100vh; }
+
+#topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 18px;
+}
+.topbar-logo { font-family: var(--font-value); font-size: 26px; color: var(--gold); letter-spacing: .03em; }
+.topbar-logo span { color: var(--ink); }
+#round-label { font-family: var(--font-value); font-size: 20px; letter-spacing: .3em; color: var(--cyan); }
+#mute-btn {
+  background: var(--blue-cell2); border: 1px solid #3a42ff; border-radius: 8px;
+  font-size: 17px; padding: 6px 11px; cursor: pointer; color: var(--ink);
+}
+
+/* ── Board ──────────────────────────────────────────────── */
+#board {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: minmax(64px, .9fr) repeat(5, 1fr);
+  gap: 6px;
+  padding: 4px 14px 10px;
+  background: #010218;
+  border-top: 3px solid #010218;
+}
+
+.cat-cell, .val-cell {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center;
+  min-width: 0; overflow: hidden;   /* let 1fr columns shrink on narrow screens */
+  background: linear-gradient(180deg, var(--blue-cell1), var(--blue-cell2));
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.07), inset 0 -6px 14px rgba(0,0,0,.35);
+}
+
+.cat-cell { padding: 6px 4px; }
+.cat-title {
+  font-family: var(--font-value);
+  font-size: clamp(13px, 1.6vw, 21px);
+  letter-spacing: .04em; line-height: 1.05;
+  text-shadow: 0 2px 3px rgba(0,0,0,.8);
+  max-width: 100%; overflow-wrap: anywhere;
+}
+.cat-sub { margin-top: 4px; font-size: clamp(8px, .85vw, 10px); letter-spacing: .18em; color: #9aa2ff; text-transform: uppercase; }
+
+.val-cell {
+  font-family: var(--font-value);
+  font-size: clamp(26px, 3.6vw, 52px);
+  color: var(--gold);
+  text-shadow: 0 3px 0 rgba(0,0,0,.55);
+  cursor: pointer; border: none;
+  transition: transform .08s, filter .12s;
+}
+.val-cell:hover { filter: brightness(1.25); transform: scale(1.02); }
+.val-cell.used  { color: transparent; text-shadow: none; cursor: default; background: linear-gradient(180deg, #05063c, #030428); }
+.val-cell.used:hover { filter: none; transform: none; }
+
+/* ── Score bar ──────────────────────────────────────────── */
+#scorebar {
+  display: flex; gap: 10px; justify-content: center;
+  padding: 10px 14px 14px;
+}
+.podium-card {
+  min-width: 170px; text-align: center;
+  background: linear-gradient(180deg, #101563, #0a0d45);
+  border: 2px solid #262fbf; border-radius: 10px;
+  padding: 9px 16px 11px;
+  transition: border-color .2s, box-shadow .2s;
+}
+.podium-card.active { border-color: var(--gold); box-shadow: 0 0 18px rgba(255,204,77,.35); }
+.podium-name { font-size: 11px; letter-spacing: .25em; color: #9aa2ff; text-transform: uppercase; }
+.podium-card.active .podium-name { color: var(--gold); }
+.podium-score { font-family: var(--font-value); font-size: 30px; margin-top: 2px; }
+.podium-score.neg { color: var(--bad); }
+
+/* ── Clue overlay ───────────────────────────────────────── */
+#clue, #wager {
+  position: fixed; inset: 0; z-index: 50;
+  background: radial-gradient(130% 130% at 50% 0%, #1219e0 0%, var(--blue-clue) 45%, #04053f 100%);
+  display: flex; align-items: center; justify-content: center;
+  animation: clue-in .22s ease-out;
+}
+@keyframes clue-in { from { transform: scale(.35); opacity: .2; } to { transform: scale(1); opacity: 1; } }
+
+.clue-inner { width: min(920px, 94vw); text-align: center; padding: 24px; }
+
+.clue-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-family: var(--font-value); letter-spacing: .1em;
+  border-bottom: 2px solid rgba(255,255,255,.25); padding-bottom: 10px; margin-bottom: 26px;
+}
+#clue-cat   { font-size: clamp(18px, 2.6vw, 28px); }
+#clue-value { font-size: clamp(22px, 3vw, 34px); color: var(--gold); }
+
+#dd-flash {
+  font-family: var(--font-value);
+  font-size: clamp(40px, 7vw, 76px);
+  color: var(--pink);
+  text-shadow: 0 0 26px rgba(255,62,200,.8), 0 4px 0 rgba(0,0,0,.5);
+  animation: dd-pulse .55s ease-in-out infinite alternate;
+  margin-bottom: 18px;
+}
+@keyframes dd-pulse { from { transform: scale(1); } to { transform: scale(1.07); } }
+
+.clue-player { font-size: 12px; letter-spacing: .35em; color: var(--cyan); text-transform: uppercase; margin-bottom: 14px; }
+
+#clue-q {
+  font-family: var(--font-clue);
+  font-size: clamp(21px, 3.1vw, 34px);
+  font-weight: bold;
+  text-transform: uppercase;
+  line-height: 1.35;
+  text-shadow: 2px 2px 2px rgba(0,0,0,.85);
+  min-height: 3em;
+  margin-bottom: 30px;
+}
+
+#clue-answers { display: grid; gap: 12px; max-width: 640px; margin: 0 auto; }
+.ans-btn {
+  display: flex; align-items: center; gap: 14px; text-align: left;
+  font-family: var(--font-ui); font-size: clamp(15px, 1.9vw, 19px);
+  color: var(--ink); background: rgba(0,0,40,.42);
+  border: 2px solid rgba(154,162,255,.5); border-radius: 10px;
+  padding: 13px 18px; cursor: pointer;
+  transition: background .12s, border-color .12s, transform .08s;
+}
+.ans-btn:hover { background: rgba(20,26,120,.75); border-color: var(--cyan); transform: translateX(4px); }
+.ans-key {
+  font-family: var(--font-value); font-size: 20px; color: var(--gold);
+  border: 1px solid rgba(255,204,77,.6); border-radius: 6px;
+  width: 32px; height: 32px; line-height: 30px; text-align: center; flex: none;
+}
+.ans-btn.reveal-good { background: rgba(17,84,48,.9); border-color: var(--good); }
+.ans-btn.reveal-bad  { background: rgba(96,18,34,.9); border-color: var(--bad); opacity: .95; }
+.ans-btn.dim { opacity: .35; }
+.ans-btn:disabled { cursor: default; transform: none; }
+
+#timer { height: 7px; background: rgba(0,0,30,.6); border-radius: 4px; margin-top: 26px; overflow: hidden; }
+#timer-fill { height: 100%; width: 100%; background: linear-gradient(90deg, var(--cyan), var(--pink)); border-radius: 4px; }
+
+#verdict { margin-top: 22px; }
+#verdict-text {
+  font-family: var(--font-value);
+  font-size: clamp(26px, 4vw, 40px);
+  letter-spacing: .06em;
+  margin-bottom: 6px;
+}
+#verdict-text.good { color: var(--good); text-shadow: 0 0 20px rgba(47,224,124,.5); }
+#verdict-text.bad  { color: var(--bad);  text-shadow: 0 0 20px rgba(255,84,112,.5); }
+
+/* ── Final wager ────────────────────────────────────────── */
+.final-title {
+  font-family: var(--font-value);
+  font-size: clamp(34px, 6vw, 64px);
+  color: var(--gold);
+  text-shadow: 0 3px 0 var(--gold-deep), 0 8px 20px rgba(0,0,0,.6);
+  margin-bottom: 10px;
+}
+.final-cat { font-family: var(--font-value); font-size: clamp(20px, 3vw, 30px); letter-spacing: .12em; color: var(--cyan); margin-bottom: 26px; }
+
+.wager-row { display: flex; align-items: center; gap: 22px; max-width: 560px; margin: 0 auto 8px; }
+#wager-slider { flex: 1; accent-color: var(--gold); height: 30px; cursor: pointer; }
+#wager-amt { font-family: var(--font-value); font-size: 40px; color: var(--gold); min-width: 130px; text-align: right; }
+
+/* ── Results ────────────────────────────────────────────── */
+#podium { display: flex; gap: 14px; justify-content: center; margin: 30px 0 8px; flex-wrap: wrap; }
+#podium .podium-card { padding: 16px 26px; }
+#podium .winner { border-color: var(--gold); box-shadow: 0 0 24px rgba(255,204,77,.45); }
+#podium .winner .podium-name::after { content: " 🏆"; }
+.fun-fact { margin-top: 18px; color: #aeb6ff; font-size: 13px; max-width: 540px; margin-left: auto; margin-right: auto; line-height: 1.6; }
+
+/* ── Small screens ──────────────────────────────────────── */
+@media (max-width: 640px) {
+  #board { gap: 3px; padding: 3px 6px 6px; }
+  #topbar { padding: 8px 10px; }
+  .topbar-logo { font-size: 18px; }
+  #round-label { font-size: 13px; letter-spacing: .15em; }
+  #mute-btn { font-size: 13px; padding: 4px 8px; }
+  .cat-title { font-size: 10px; letter-spacing: .02em; }
+  .cat-sub { display: none; }
+  .val-cell { font-size: clamp(15px, 5.4vw, 30px); }
+  .podium-card { min-width: 100px; padding: 6px 10px 8px; }
+  .podium-score { font-size: 22px; }
+  .clue-head { flex-direction: column; gap: 4px; align-items: center; }
+}
+
+</style>
+<!-- ══════════ SPLASH ══════════ -->
+<section id="splash" class="screen">
+  <div class="splash-grid"></div>
+  <div class="splash-inner">
+    <div class="splash-kicker">DIRECT FROM THE VIDEO VAULT</div>
+    <h1 class="logo">RETRO<span>PARDY!</span></h1>
+    <div class="splash-years">&#9733; 1985 &ndash; 1995 &#9733;</div>
+    <p class="splash-tag">Movies &middot; Music &middot; Video Games &middot; World Events &middot; Cars &middot; Snacks &amp; more</p>
+
+    <div class="player-pick">
+      <div class="pick-label">CONTESTANTS</div>
+      <div class="pick-btns">
+        <button class="pick-btn selected" data-n="1">1</button>
+        <button class="pick-btn" data-n="2">2</button>
+        <button class="pick-btn" data-n="3">3</button>
+      </div>
+    </div>
+
+    <button id="start-btn" class="big-btn">START THE GAME</button>
+    <div class="splash-foot">
+      <span id="bank-count"></span>
+      <button id="reset-seen" class="link-btn" title="Forget which questions you've already been asked">reset question history</button>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ GAME ══════════ -->
+<section id="game" class="screen hidden">
+  <header id="topbar">
+    <div class="topbar-logo">RETRO<span>PARDY!</span></div>
+    <div id="round-label">ROUND 1</div>
+    <button id="mute-btn" title="Sound on/off">&#128266;</button>
+  </header>
+
+  <div id="board"></div>
+
+  <footer id="scorebar"></footer>
+</section>
+
+<!-- ══════════ CLUE OVERLAY ══════════ -->
+<section id="clue" class="screen hidden">
+  <div class="clue-inner">
+    <div class="clue-head">
+      <span id="clue-cat"></span>
+      <span id="clue-value"></span>
+    </div>
+    <div id="dd-flash" class="hidden">DAILY&nbsp;DOUBLE!</div>
+    <div id="clue-player" class="clue-player"></div>
+    <p id="clue-q"></p>
+    <div id="clue-answers"></div>
+    <div id="timer"><div id="timer-fill"></div></div>
+    <div id="verdict" class="hidden">
+      <div id="verdict-text"></div>
+      <button id="continue-btn" class="big-btn small">CONTINUE</button>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ WAGER (FINAL) ══════════ -->
+<section id="wager" class="screen hidden">
+  <div class="clue-inner">
+    <div class="final-title">FINAL RETROPARDY!</div>
+    <div id="wager-cat" class="final-cat"></div>
+    <div id="wager-player" class="clue-player"></div>
+    <div class="wager-row">
+      <input type="range" id="wager-slider" min="0" max="1000" step="100" value="0">
+      <div id="wager-amt">$0</div>
+    </div>
+    <button id="wager-btn" class="big-btn small">LOCK IT IN</button>
+  </div>
+</section>
+
+<!-- ══════════ RESULTS ══════════ -->
+<section id="results" class="screen hidden">
+  <div class="splash-grid"></div>
+  <div class="splash-inner">
+    <div class="splash-kicker">FINAL SCORES</div>
+    <h1 class="logo small-logo">THAT'S A WRAP</h1>
+    <div id="podium"></div>
+    <div id="fun-fact" class="fun-fact"></div>
+    <button id="again-btn" class="big-btn">PLAY AGAIN</button>
+  </div>
+</section>
+
+<div id="scanlines"></div>
+<script>
+window.RETRO_BANK = window.RETRO_BANK || [];
+window.RETRO_BANK.push(
+{cat:"Movies",d:1,q:"In Back to the Future (1985), what kind of car is the time machine?",c:["A Corvette","A DeLorean","A Trans Am"],a:1},
+{cat:"Movies",d:1,q:"Which 1993 Steven Spielberg blockbuster features cloned dinosaurs running loose in a theme park?",c:["Jurassic Park","Congo","Hook"],a:0},
+{cat:"Movies",d:1,q:"Who plays Kevin McCallister in Home Alone (1990)?",c:["Elijah Wood","Jonathan Taylor Thomas","Macaulay Culkin"],a:2},
+{cat:"Movies",d:1,q:"In The Lion King (1994), what is the name of Simba's father?",c:["Mufasa","Scar","Rafiki"],a:0},
+{cat:"Movies",d:1,q:"In Toy Story (1995), what is the name of the pull-string cowboy doll?",c:["Buzz","Woody","Slinky"],a:1},
+{cat:"Movies",d:1,q:"The line 'Hasta la vista, baby' comes from which 1991 action sequel?",c:["RoboCop 2","Predator 2","Terminator 2: Judgment Day"],a:2},
+{cat:"Movies",d:1,q:"Who stars opposite Patrick Swayze at the pottery wheel in Ghost (1990)?",c:["Meg Ryan","Julia Roberts","Demi Moore"],a:2},
+{cat:"Movies",d:1,q:"Who plays the Joker in Tim Burton's Batman (1989)?",c:["Willem Dafoe","Jack Nicholson","Danny DeVito"],a:1},
+{cat:"Movies",d:1,q:"Who plays the title role in Forrest Gump (1994)?",c:["Tom Hanks","Kevin Costner","Robin Williams"],a:0},
+{cat:"Movies",d:1,q:"Which comedian voices the Genie in Disney's Aladdin (1992)?",c:["Robin Williams","Eddie Murphy","Billy Crystal"],a:0},
+{cat:"Movies",d:1,q:"Who plays Vivian opposite Richard Gere in Pretty Woman (1990)?",c:["Sandra Bullock","Julia Roberts","Michelle Pfeiffer"],a:1},
+{cat:"Movies",d:1,q:"Home Alone 2 (1992) is subtitled 'Lost in' which city?",c:["Chicago","Las Vegas","New York"],a:2},
+{cat:"Movies",d:1,q:"What is the name of the mermaid princess in The Little Mermaid (1989)?",c:["Ariel","Ursula","Jasmine"],a:0},
+{cat:"Movies",d:1,q:"In Beauty and the Beast (1991), what is the name of the book-loving heroine?",c:["Aurora","Belle","Odette"],a:1},
+{cat:"Movies",d:1,q:"In Mrs. Doubtfire (1993), the divorced dad disguises himself as what?",c:["A flight attendant","A schoolteacher","An elderly British housekeeper"],a:2},
+{cat:"Movies",d:1,q:"In Speed (1994), the bus will explode if it drops below what speed?",c:["50 mph","55 mph","60 mph"],a:0},
+{cat:"Movies",d:1,q:"In Wayne's World (1992), Wayne and Garth famously headbang in the car to which song?",c:["Livin' on a Prayer","Sweet Child O' Mine","Bohemian Rhapsody"],a:2},
+{cat:"Movies",d:1,q:"'Nobody puts Baby in a corner' is a famous line from which 1987 film?",c:["Cocktail","Dirty Dancing","Can't Buy Me Love"],a:1},
+{cat:"Movies",d:1,q:"What is Tom Cruise's call sign in Top Gun (1986)?",c:["Maverick","Iceman","Goose"],a:0},
+{cat:"Movies",d:1,q:"In Free Willy (1993), Willy is what kind of animal?",c:["A dolphin","A killer whale","A sea lion"],a:1},
+{cat:"Movies",d:1,q:"Who plays lounge singer Deloris hiding out as a nun in Sister Act (1992)?",c:["Queen Latifah","Angela Bassett","Whoopi Goldberg"],a:2},
+{cat:"Movies",d:2,q:"In Die Hard (1988), John McClane battles terrorists inside which Los Angeles skyscraper?",c:["The Bonaventure Hotel","Century City Tower","Nakatomi Plaza"],a:2},
+{cat:"Movies",d:2,q:"Who wrote and directed Pulp Fiction (1994)?",c:["Quentin Tarantino","Oliver Stone","Robert Zemeckis"],a:0},
+{cat:"Movies",d:2,q:"Who plays Dr. Hannibal Lecter in The Silence of the Lambs (1991)?",c:["Gary Oldman","Anthony Hopkins","Alan Rickman"],a:1},
+{cat:"Movies",d:2,q:"Which 1989 sequel features a river of pink slime flowing beneath New York City?",c:["Gremlins 2","Ghostbusters II","Back to the Future Part II"],a:1},
+{cat:"Movies",d:2,q:"In Terminator 2 (1991), what is the model name of the liquid-metal villain?",c:["T-1000","T-800","T-X"],a:0},
+{cat:"Movies",d:2,q:"In The Bodyguard (1992), Whitney Houston covers which Dolly Parton song?",c:["Jolene","9 to 5","I Will Always Love You"],a:2},
+{cat:"Movies",d:2,q:"Which 1988 Best Picture winner stars Dustin Hoffman as autistic savant Raymond Babbitt?",c:["Rain Man","Driving Miss Daisy","Children of a Lesser God"],a:0},
+{cat:"Movies",d:2,q:"In Rocky IV (1985), Rocky Balboa fights which Soviet boxer?",c:["Clubber Lang","Tommy Gunn","Ivan Drago"],a:2},
+{cat:"Movies",d:2,q:"Who plays Doc Brown in the Back to the Future trilogy?",c:["Christopher Walken","Christopher Lloyd","Dan Aykroyd"],a:1},
+{cat:"Movies",d:2,q:"'You can't handle the truth!' is shouted in which 1992 courtroom drama?",c:["A Few Good Men","The Firm","Presumed Innocent"],a:0},
+{cat:"Movies",d:2,q:"Which director cast Johnny Depp as Edward Scissorhands (1990)?",c:["Sam Raimi","Tim Burton","Joe Dante"],a:1},
+{cat:"Movies",d:2,q:"In The Fugitive (1993), Dr. Richard Kimble is wrongly convicted of whose murder?",c:["His brother's","His partner's","His wife's"],a:2},
+{cat:"Movies",d:2,q:"In Groundhog Day (1993), weatherman Phil relives the same day in which town?",c:["Punxsutawney","Poughkeepsie","Pawtucket"],a:0},
+{cat:"Movies",d:2,q:"Who plays Harry alongside Jim Carrey's Lloyd in Dumb and Dumber (1994)?",c:["Woody Harrelson","Jeff Daniels","David Spade"],a:1},
+{cat:"Movies",d:2,q:"Which 1995 Ron Howard film dramatizes NASA's near-disastrous 1970 moon mission?",c:["The Right Stuff","SpaceCamp","Apollo 13"],a:2},
+{cat:"Movies",d:2,q:"In Hook (1991), who plays Captain Hook opposite Robin Williams' grown-up Peter Pan?",c:["Bob Hoskins","John Malkovich","Dustin Hoffman"],a:2},
+{cat:"Movies",d:2,q:"In Braveheart (1995), Mel Gibson plays which Scottish rebel?",c:["Rob Roy","William Wallace","Robert the Bruce"],a:1},
+{cat:"Movies",d:2,q:"Who plays the wisecracking striped-suit ghost in Beetlejuice (1988)?",c:["Michael Keaton","Steve Martin","Rick Moranis"],a:0},
+{cat:"Movies",d:2,q:"In Se7en (1995), the serial killer stages murders based on what?",c:["The seven deadly sins","The Ten Commandments","The signs of the zodiac"],a:0},
+{cat:"Movies",d:2,q:"In The Mask (1994), what color does Stanley Ipkiss' face turn when he wears the mask?",c:["Purple","Red","Green"],a:2},
+{cat:"Movies",d:2,q:"Which action star voices baby Mikey in Look Who's Talking (1989)?",c:["Sylvester Stallone","Bruce Willis","Mel Gibson"],a:1},
+{cat:"Movies",d:3,q:"Who directed the 1990 mob classic Goodfellas?",c:["Brian De Palma","Martin Scorsese","Francis Ford Coppola"],a:1},
+{cat:"Movies",d:3,q:"Clint Eastwood directed and starred in which 1992 Best Picture-winning Western?",c:["Tombstone","Dances with Wolves","Unforgiven"],a:2},
+{cat:"Movies",d:3,q:"In Pulp Fiction (1994), what do they call a Quarter Pounder with Cheese in Paris?",c:["A Royale with Cheese","A Big Kahuna","A Le Grand Cheese"],a:0},
+{cat:"Movies",d:3,q:"The 'I'll have what she's having' scene in When Harry Met Sally (1989) is set in which New York deli?",c:["Katz's Delicatessen","Carnegie Deli","Stage Deli"],a:0},
+{cat:"Movies",d:3,q:"The Shawshank Redemption (1994) is based on a novella by which author?",c:["John Grisham","Stephen King","Michael Crichton"],a:1},
+{cat:"Movies",d:3,q:"Who plays Oskar Schindler in Schindler's List (1993)?",c:["Ralph Fiennes","Ben Kingsley","Liam Neeson"],a:2},
+{cat:"Movies",d:3,q:"What is the name of Ferris' hypochondriac best friend in Ferris Bueller's Day Off (1986)?",c:["Cameron Frye","Duckie Dale","Farmer Ted"],a:0},
+{cat:"Movies",d:3,q:"In The Princess Bride (1987), Inigo Montoya hunts the man with how many fingers on his right hand?",c:["Five","Six","Seven"],a:1},
+{cat:"Movies",d:3,q:"In Field of Dreams (1989), which banned ballplayer first emerges from the cornfield?",c:["Ty Cobb","Babe Ruth","Shoeless Joe Jackson"],a:2},
+{cat:"Movies",d:3,q:"In Total Recall (1990), Arnold Schwarzenegger's character travels to which planet?",c:["Venus","Jupiter","Mars"],a:2},
+{cat:"Movies",d:3,q:"Kathy Bates won the 1990 Best Actress Oscar for playing which obsessed fan in Misery?",c:["Alex Forrest","Annie Wilkes","Hedra Carlson"],a:1},
+{cat:"Movies",d:3,q:"Who directed Thelma & Louise (1991)?",c:["Ridley Scott","Tony Scott","Jonathan Demme"],a:0},
+{cat:"Movies",d:3,q:"In The Usual Suspects (1995), what is the name of the mythical crime lord everyone fears?",c:["Keyser Soze","Marsellus Wallace","Hans Gruber"],a:0},
+{cat:"Movies",d:3,q:"Which 1995 Michael Mann film put Al Pacino and Robert De Niro in a scene together for the first time?",c:["Casino","Heat","Carlito's Way"],a:1},
+{cat:"Movies",d:3,q:"Who directed the 1986 sequel Aliens?",c:["John Carpenter","David Fincher","James Cameron"],a:2},
+{cat:"Movies",d:3,q:"In Big (1988), Tom Hanks plays 'Heart and Soul' on a giant floor piano at which toy store?",c:["FAO Schwarz","Toys R Us","KB Toys"],a:0},
+{cat:"Movies",d:3,q:"In Dead Poets Society (1989), what is the name of the inspiring English teacher played by Robin Williams?",c:["Glenn Holland","Mark Thackeray","John Keating"],a:2},
+{cat:"Movies",d:3,q:"In Reservoir Dogs (1992), the robbers use aliases based on what?",c:["Playing cards","Colors","Zodiac signs"],a:1},
+{cat:"Movies",d:3,q:"Marisa Tomei won an Oscar in which category for My Cousin Vinny (1992)?",c:["Best Supporting Actress","Best Actress","Best Original Screenplay"],a:0},
+{cat:"Movies",d:3,q:"In Point Break (1991), what is the name of Patrick Swayze's bank-robbing surf guru?",c:["Johnny Utah","Bodhi","Tyler"],a:1},
+{cat:"Movies",d:3,q:"GoldenEye (1995) marked the first outing as James Bond for which actor?",c:["Timothy Dalton","Ralph Fiennes","Pierce Brosnan"],a:2},
+{cat:"Movies",d:4,q:"Which director won the Oscar for the 1986 Best Picture Vietnam drama Platoon?",c:["Stanley Kubrick","Francis Ford Coppola","Oliver Stone"],a:2},
+{cat:"Movies",d:4,q:"Bertolucci's The Last Emperor (1987) won Best Picture and how many Oscars in total?",c:["Seven","Nine","Eleven"],a:1},
+{cat:"Movies",d:4,q:"In Spike Lee's Do the Right Thing (1989), who owns the pizzeria where the climax erupts?",c:["Sal","Pino","Vito"],a:0},
+{cat:"Movies",d:4,q:"Who won the 1989 Best Actress Oscar for Driving Miss Daisy at age 80?",c:["Jessica Tandy","Katharine Hepburn","Angela Lansbury"],a:0},
+{cat:"Movies",d:4,q:"Cinema Paradiso, winner of the foreign-language Oscar at the 1990 ceremony, is from which country?",c:["France","Italy","Spain"],a:1},
+{cat:"Movies",d:4,q:"Who directed The Piano (1993)?",c:["Gillian Armstrong","Peter Weir","Jane Campion"],a:2},
+{cat:"Movies",d:4,q:"Denzel Washington won his first Oscar for which 1989 Civil War film?",c:["Glory","Cry Freedom","A Soldier's Story"],a:0},
+{cat:"Movies",d:4,q:"Which 1991 Coen brothers film about a struggling screenwriter won the Palme d'Or at Cannes?",c:["Miller's Crossing","Barton Fink","The Hudsucker Proxy"],a:1},
+{cat:"Movies",d:4,q:"Whose debut film 'sex, lies, and videotape' won the Palme d'Or in 1989?",c:["Richard Linklater","Gus Van Sant","Steven Soderbergh"],a:2},
+{cat:"Movies",d:4,q:"Who directed Arnold Schwarzenegger in Predator (1987)?",c:["John McTiernan","Renny Harlin","Walter Hill"],a:0},
+{cat:"Movies",d:4,q:"Which Dutch director made both RoboCop (1987) and Total Recall (1990)?",c:["Jan de Bont","Paul Verhoeven","George Miller"],a:1},
+{cat:"Movies",d:4,q:"Dennis Hopper plays the gas-huffing villain Frank Booth in which 1986 David Lynch film?",c:["Wild at Heart","Lost Highway","Blue Velvet"],a:2},
+{cat:"Movies",d:4,q:"R. Lee Ermey's drill instructor Gunnery Sgt. Hartman appears in which 1987 Stanley Kubrick film?",c:["Hamburger Hill","Casualties of War","Full Metal Jacket"],a:2},
+{cat:"Movies",d:4,q:"Awakenings (1990) is based on a memoir by which neurologist?",c:["V.S. Ramachandran","Oliver Sacks","Antonio Damasio"],a:1},
+{cat:"Movies",d:4,q:"The Crying Game (1992) won its only Oscar in which category?",c:["Best Original Screenplay","Best Actor","Best Director"],a:0},
+{cat:"Movies",d:4,q:"Which French director cast 12-year-old Natalie Portman in Leon: The Professional (1994)?",c:["Luc Besson","Jean-Pierre Jeunet","Mathieu Kassovitz"],a:0},
+{cat:"Movies",d:4,q:"Bruce Willis time-travels to trace a deadly plague in which 1995 Terry Gilliam film?",c:["Brazil","Twelve Monkeys","The Fisher King"],a:1},
+{cat:"Movies",d:4,q:"Who directed the 1992 Hollywood satire The Player?",c:["Sydney Pollack","Barry Levinson","Robert Altman"],a:2},
+{cat:"Movies",d:4,q:"Raising Arizona (1987) stars Nicolas Cage opposite which actress?",c:["Holly Hunter","Frances McDormand","Geena Davis"],a:0},
+{cat:"Movies",d:4,q:"Emma Thompson won her Best Actress Oscar for which 1992 Merchant Ivory film?",c:["A Room with a View","Howards End","The Remains of the Day"],a:1},
+{cat:"Movies",d:4,q:"Al Pacino won his only acting Oscar for playing a blind colonel in which 1992 film?",c:["Glengarry Glen Ross","Carlito's Way","Scent of a Woman"],a:2},
+{cat:"Movies",d:5,q:"Angels watch over Berlin in Wings of Desire (1987), directed by whom?",c:["Werner Herzog","Wim Wenders","Rainer Werner Fassbinder"],a:1},
+{cat:"Movies",d:5,q:"Who directed the 1989 art-house shocker The Cook, the Thief, His Wife and Her Lover?",c:["Peter Greenaway","Derek Jarman","Ken Russell"],a:0},
+{cat:"Movies",d:5,q:"Who directed the landmark 1988 anime film Akira?",c:["Hayao Miyazaki","Mamoru Oshii","Katsuhiro Otomo"],a:2},
+{cat:"Movies",d:5,q:"Babette's Feast, foreign-language Oscar winner at the 1988 ceremony, comes from which country?",c:["Denmark","Sweden","Norway"],a:0},
+{cat:"Movies",d:5,q:"In My Left Foot (1989), Daniel Day-Lewis portrays which real Irish writer and painter?",c:["Brendan Behan","Christy Brown","Patrick Kavanagh"],a:1},
+{cat:"Movies",d:5,q:"Jeremy Irons won an Oscar for Reversal of Fortune (1990) playing which real-life figure?",c:["Michael Milken","John DeLorean","Claus von Bulow"],a:2},
+{cat:"Movies",d:5,q:"Jean-Pierre Jeunet co-directed Delicatessen (1991) with whom?",c:["Luc Besson","Leos Carax","Marc Caro"],a:2},
+{cat:"Movies",d:5,q:"David Thewlis won the 1993 Cannes Best Actor prize for which Mike Leigh film?",c:["Life Is Sweet","Naked","High Hopes"],a:1},
+{cat:"Movies",d:5,q:"The Sacrifice (1986) was the final film of which director?",c:["Andrei Tarkovsky","Sergei Parajanov","Ingmar Bergman"],a:0},
+{cat:"Movies",d:5,q:"Who directed Gong Li in Raise the Red Lantern (1991)?",c:["Zhang Yimou","Chen Kaige","Wong Kar-wai"],a:0},
+{cat:"Movies",d:5,q:"Farewell My Concubine shared the 1993 Palme d'Or with which film?",c:["Schindler's List","The Piano","Short Cuts"],a:1},
+{cat:"Movies",d:5,q:"Which director of Fatal Attraction also made the 1990 horror film Jacob's Ladder?",c:["Alan Parker","Tony Scott","Adrian Lyne"],a:2},
+{cat:"Movies",d:5,q:"Who directed and starred in the 1989 adaptation of Shakespeare's Henry V?",c:["Kenneth Branagh","Mel Gibson","Laurence Olivier"],a:0},
+{cat:"Movies",d:5,q:"The Double Life of Veronique (1991) was directed by which Polish filmmaker?",c:["Andrzej Wajda","Krzysztof Kieslowski","Roman Polanski"],a:1},
+{cat:"Movies",d:5,q:"Martin Landau won an Oscar for Ed Wood (1994) playing which horror icon?",c:["Boris Karloff","Vincent Price","Bela Lugosi"],a:2},
+{cat:"Movies",d:5,q:"Richard Linklater's 1991 indie landmark that drifts among Austin eccentrics is titled what?",c:["Slacker","Kicking and Screaming","Gas Food Lodging"],a:0},
+{cat:"Movies",d:5,q:"Which director famously shot El Mariachi (1992) for about 7,000 dollars?",c:["Guillermo del Toro","Alfonso Cuaron","Robert Rodriguez"],a:2},
+{cat:"Movies",d:5,q:"Whit Stillman's 1990 debut about young Manhattan socialites is titled what?",c:["Barcelona","Metropolitan","The Last Days of Disco"],a:1},
+{cat:"Movies",d:5,q:"Matt Dillon leads a crew of pharmacy-robbing addicts in which 1989 Gus Van Sant film?",c:["Drugstore Cowboy","My Own Private Idaho","To Die For"],a:0},
+{cat:"Movies",d:5,q:"Tampopo (1985), the Japanese 'ramen western' comedy, was directed by whom?",c:["Shohei Imamura","Juzo Itami","Masaki Kobayashi"],a:1},
+{cat:"Movies",d:5,q:"Eleven-year-old Anna Paquin won Best Supporting Actress for which 1993 film?",c:["The Age of Innocence","Little Women","The Piano"],a:2}
+);
+
+window.RETRO_BANK = window.RETRO_BANK || [];
+window.RETRO_BANK.push(
+{cat:"Television",d:1,q:"Which 1994 NBC sitcom follows six pals who hang out at the Central Perk coffee shop?",c:["Seinfeld","Friends","Cheers"],a:1},
+{cat:"Television",d:1,q:"The sitcom Cheers is set in a bar in which city?",c:["Boston","Chicago","New York"],a:0},
+{cat:"Television",d:1,q:"Will Smith stars as a Philadelphia teen sent to live with rich relatives in which 1990 sitcom?",c:["Family Matters","Martin","The Fresh Prince of Bel-Air"],a:2},
+{cat:"Television",d:1,q:"The Simpsons family lives in which town?",c:["Springfield","Shelbyville","Capital City"],a:0},
+{cat:"Television",d:1,q:"What color is Barney, the singing dinosaur on Barney and Friends?",c:["Green","Purple","Blue"],a:1},
+{cat:"Television",d:1,q:"The Teenage Mutant Ninja Turtles are named after four famous what?",c:["Renaissance artists","Roman emperors","Greek gods"],a:0},
+{cat:"Television",d:1,q:"On DuckTales, which rich duck loves diving into his giant money bin?",c:["Donald Duck","Ludwig Von Drake","Scrooge McDuck"],a:2},
+{cat:"Television",d:1,q:"Tim Allen hosts the show-within-a-show 'Tool Time' on which sitcom?",c:["Home Improvement","Coach","Wings"],a:0},
+{cat:"Television",d:1,q:"David Hasselhoff plays lifeguard Mitch Buchannon on which series?",c:["Miami Vice","Baywatch","Knight Rider"],a:1},
+{cat:"Television",d:1,q:"On Saved by the Bell, Zack, Slater, and Kelly attend which high school?",c:["Bayside High","Ridgemont High","Valley High"],a:0},
+{cat:"Television",d:1,q:"The sitcom Full House is set in which city?",c:["Los Angeles","Seattle","San Francisco"],a:2},
+{cat:"Television",d:1,q:"On Married... with Children, what does Al Bundy sell for a living?",c:["Women's shoes","Used cars","Vacuum cleaners"],a:0},
+{cat:"Television",d:1,q:"FBI agents Mulder and Scully investigate the paranormal on which 1993 series?",c:["Twin Peaks","The X-Files","Unsolved Mysteries"],a:1},
+{cat:"Television",d:1,q:"Who plays Captain Jean-Luc Picard on Star Trek: The Next Generation?",c:["William Shatner","Patrick Stewart","Avery Brooks"],a:1},
+{cat:"Television",d:1,q:"The Golden Girls share a house in which city?",c:["Miami","Orlando","Palm Springs"],a:0},
+{cat:"Television",d:1,q:"Nerdy Steve Urkel keeps asking 'Did I do that?' on which sitcom?",c:["Full House","Step by Step","Family Matters"],a:2},
+{cat:"Television",d:1,q:"On his self-titled 1986 sitcom, ALF is a wisecracking what?",c:["Alien","Robot","Talking dog"],a:0},
+{cat:"Television",d:1,q:"Who hosted the quiz show Jeopardy! throughout the late 1980s and 1990s?",c:["Pat Sajak","Bob Barker","Alex Trebek"],a:2},
+{cat:"Television",d:1,q:"Who turns the letters on Wheel of Fortune?",c:["Vanna White","Kathie Lee Gifford","Suzanne Somers"],a:0},
+{cat:"Television",d:1,q:"Which 1993 kids' series features color-coded teen heroes who shout 'It's morphin time'?",c:["VR Troopers","Mighty Morphin Power Rangers","Superhuman Samurai Syber-Squad"],a:1},
+{cat:"Television",d:1,q:"The sitcom Seinfeld is set in which city?",c:["Boston","Los Angeles","New York City"],a:2},
+{cat:"Television",d:2,q:"On Seinfeld, what is the name of Jerry's mailman archenemy?",c:["Kramer","Newman","Puddy"],a:1},
+{cat:"Television",d:2,q:"On Cheers, bar owner Sam Malone is a retired pro in which sport?",c:["Baseball","Football","Hockey"],a:0},
+{cat:"Television",d:2,q:"Which Full House uncle does John Stamos play?",c:["Joey","Danny","Jesse"],a:2},
+{cat:"Television",d:2,q:"What is the name of the Banks family butler on The Fresh Prince of Bel-Air?",c:["Geoffrey","Winston","Nigel"],a:0},
+{cat:"Television",d:2,q:"On The Simpsons, where does Homer work?",c:["A bowling alley","The nuclear power plant","The DMV"],a:1},
+{cat:"Television",d:2,q:"Which Home Improvement neighbor's face always stays hidden behind the backyard fence?",c:["Al","Benny","Wilson"],a:2},
+{cat:"Television",d:2,q:"In the 1994 Friends pilot, Rachel bursts into Central Perk wearing what?",c:["A wedding dress","A waitress uniform","A prom gown"],a:0},
+{cat:"Television",d:2,q:"On Animaniacs, what do Pinky and the Brain try to do every night?",c:["Rob a bank","Take over the world","Escape the lab"],a:1},
+{cat:"Television",d:2,q:"The Ninja Turtles' sensei, Splinter, is what kind of animal?",c:["A cat","A hamster","A rat"],a:2},
+{cat:"Television",d:2,q:"What are the names of Scrooge McDuck's three nephews on DuckTales?",c:["Huey, Dewey, and Louie","Tom, Dick, and Harry","Chip, Dale, and Gus"],a:0},
+{cat:"Television",d:2,q:"On Quantum Leap, Sam's cigar-smoking pal Al appears to him as a what?",c:["Ghost","Hologram","Android"],a:1},
+{cat:"Television",d:2,q:"Who plays Wayne in SNL's 'Wayne's World' sketches?",c:["Dana Carvey","Mike Myers","Phil Hartman"],a:1},
+{cat:"Television",d:2,q:"Who plays Roseanne's husband Dan Conner on Roseanne?",c:["John Goodman","Ed O'Neill","Craig T. Nelson"],a:0},
+{cat:"Television",d:2,q:"On which sitcom does puppet Baby Sinclair yell 'Not the mama!'?",c:["ALF","Dinosaurs","Barney and Friends"],a:1},
+{cat:"Television",d:2,q:"Whose catchphrase is 'Whoa!' on the sitcom Blossom?",c:["Joey Russo","Anthony Russo","Nick Russo"],a:0},
+{cat:"Television",d:2,q:"Which twins move from Minnesota to Beverly Hills on Beverly Hills, 90210?",c:["Dylan and Kelly","Steve and Donna","Brandon and Brenda"],a:2},
+{cat:"Television",d:2,q:"Which brave baby leads the adventures on Rugrats?",c:["Chuckie Finster","Tommy Pickles","Phil DeVille"],a:1},
+{cat:"Television",d:2,q:"On The Ren and Stimpy Show, Ren is what kind of animal?",c:["A chihuahua","A cat","A weasel"],a:0},
+{cat:"Television",d:2,q:"Bob Barker ended each Price Is Right episode urging viewers to do what?",c:["Come on down","Spay or neuter their pets","Always read the fine print"],a:1},
+{cat:"Television",d:2,q:"In a famous 1995 Seinfeld episode, a strict soup vendor barks what at customers?",c:["No soup for you!","Get out of my kitchen!","You get nothing!"],a:0},
+{cat:"Television",d:2,q:"What is little Michelle Tanner's catchphrase on Full House?",c:["How rude!","You got it, dude!","Cut it out!"],a:1},
+{cat:"Television",d:3,q:"On Seinfeld, George pretends to work for which fake latex company?",c:["Kruger Industrial Smoothing","Pendant Publishing","Vandelay Industries"],a:2},
+{cat:"Television",d:3,q:"In a 1995 Seinfeld episode, Kramer's first name is revealed to be what?",c:["Gordon","Cosmo","Marvin"],a:1},
+{cat:"Television",d:3,q:"The 1993 Cheers spin-off Frasier is set in which city?",c:["Portland","San Francisco","Seattle"],a:2},
+{cat:"Television",d:3,q:"On Cheers, Woody Boyd joined the bar after the death of which beloved bartender?",c:["Coach","Cliff","Paul"],a:0},
+{cat:"Television",d:3,q:"What is the name of the Simpson family's greyhound?",c:["Laddie","Santa's Little Helper","Blinky"],a:1},
+{cat:"Television",d:3,q:"On The Fresh Prince of Bel-Air, Carlton's famous dance is set to which singer's music?",c:["Tom Jones","Barry Manilow","Neil Diamond"],a:0},
+{cat:"Television",d:3,q:"Who is the long-suffering principal of Bayside on Saved by the Bell?",c:["Mr. Feeny","Mr. Belding","Mr. Moore"],a:1},
+{cat:"Television",d:3,q:"What is the name of Chris Farley's SNL motivational speaker who lives in a van down by the river?",c:["Todd O'Connor","Matt Foley","Bill Brasky"],a:1},
+{cat:"Television",d:3,q:"What slogan appears on the UFO poster in Mulder's X-Files office?",c:["The Truth Is Out There","Trust No One","I Want to Believe"],a:2},
+{cat:"Television",d:3,q:"On ER (1994), George Clooney plays which pediatrician?",c:["Dr. Doug Ross","Dr. Mark Greene","Dr. John Carter"],a:0},
+{cat:"Television",d:3,q:"Melrose Place (1992) is a spin-off of which series?",c:["Party of Five","Beverly Hills, 90210","Models Inc."],a:1},
+{cat:"Television",d:3,q:"Which coffee-loving FBI agent investigates Laura Palmer's murder on Twin Peaks?",c:["Dale Cooper","Gordon Cole","Harry Truman"],a:0},
+{cat:"Television",d:3,q:"On Murder, She Wrote, mystery writer Jessica Fletcher lives in which Maine town?",c:["Cabot Cove","Mystic Harbor","Bar Haven"],a:0},
+{cat:"Television",d:3,q:"On The Golden Girls, Sophia is which roommate's mother?",c:["Blanche","Rose","Dorothy"],a:2},
+{cat:"Television",d:3,q:"On Perfect Strangers, Balki Bartokomous comes from which fictional island?",c:["Malta","Mypos","Molvania"],a:1},
+{cat:"Television",d:3,q:"Who hosted Nickelodeon's messy game show Double Dare?",c:["Marc Summers","Kirk Fogg","Mike O'Malley"],a:0},
+{cat:"Television",d:3,q:"On Legends of the Hidden Temple, what is the name of the giant talking stone head?",c:["Zoltar","Olmec","Toltec"],a:1},
+{cat:"Television",d:3,q:"Which 1992 MTV series billed itself as 'seven strangers picked to live in a house'?",c:["Road Rules","Singled Out","The Real World"],a:2},
+{cat:"Television",d:3,q:"Which band performs the Friends theme song 'I'll Be There for You'?",c:["The Rembrandts","Hootie and the Blowfish","Gin Blossoms"],a:0},
+{cat:"Television",d:3,q:"Who took over The Tonight Show when Johnny Carson retired in 1992?",c:["David Letterman","Jay Leno","Arsenio Hall"],a:1},
+{cat:"Television",d:3,q:"'The power is yours!' closes each episode of which 1990 environmental cartoon?",c:["Captain Planet and the Planeteers","Widget","Toxic Crusaders"],a:0},
+{cat:"Television",d:4,q:"Under what title did the Seinfeld pilot air in 1989?",c:["Stand-Up","The Seinfeld Chronicles","Jerry"],a:1},
+{cat:"Television",d:4,q:"In Seinfeld's 1992 episode 'The Contest,' contestants still in the running are master of their what?",c:["Castle","Universe","Domain"],a:2},
+{cat:"Television",d:4,q:"Kirstie Alley joined Cheers in 1987 as which new bar manager?",c:["Diane Chambers","Lilith Sternin","Rebecca Howe"],a:2},
+{cat:"Television",d:4,q:"The Simpsons began in 1987 as animated shorts on which program?",c:["The Tracey Ullman Show","In Living Color","Saturday Night Live"],a:0},
+{cat:"Television",d:4,q:"On Twin Peaks, which evil spirit possessed Laura Palmer's killer?",c:["MIKE","BOB","Windom Earle"],a:1},
+{cat:"Television",d:4,q:"In TNG's 1990 cliffhanger 'The Best of Both Worlds,' the Borg rename Picard what?",c:["Hugh","Locutus","Lore"],a:1},
+{cat:"Television",d:4,q:"The 1990 Newhart finale reveals the whole series was a dream of which earlier Bob Newhart character?",c:["Bob Hartley","Dick Loudon","George Utley"],a:0},
+{cat:"Television",d:4,q:"Which Dallas character stepped out of the shower in 1986, erasing an entire season as a dream?",c:["J.R. Ewing","Cliff Barnes","Bobby Ewing"],a:2},
+{cat:"Television",d:4,q:"In which 1992 spin-off do Blanche, Rose, and Sophia run a Miami hotel?",c:["Empty Nest","The Golden Palace","Nurses"],a:1},
+{cat:"Television",d:4,q:"Which future pop superstar danced as a Fly Girl on In Living Color?",c:["Mariah Carey","Jennifer Lopez","Toni Braxton"],a:1},
+{cat:"Television",d:4,q:"Which Fresh Prince of Bel-Air role was recast with a new actress in 1993?",c:["Hilary Banks","Aunt Vivian","Ashley Banks"],a:1},
+{cat:"Television",d:4,q:"On Full House, what is the name of Jesse's band?",c:["Jesse and the Rippers","Jesse and the Smash Club","The Bayside Boys"],a:0},
+{cat:"Television",d:4,q:"On Married... with Children, Al Bundy scored four touchdowns in one game for which high school?",c:["Polk High","Jefferson High","Roosevelt High"],a:0},
+{cat:"Television",d:4,q:"On The X-Files, what is the name of Mulder's sister, abducted when they were children?",c:["Melissa","Samantha","Diana"],a:1},
+{cat:"Television",d:4,q:"Jessie Spano's 'I'm so excited' breakdown on Saved by the Bell involved addiction to what?",c:["Sleeping pills","Caffeine pills","Diet shakes"],a:1},
+{cat:"Television",d:4,q:"Which a cappella group sang on PBS's Where in the World Is Carmen Sandiego?",c:["The Nylons","Boyz II Men","Rockapella"],a:2},
+{cat:"Television",d:4,q:"Nickelodeon's Salute Your Shorts takes place at which summer camp?",c:["Camp Nowhere","Camp Anawanna","Camp Waziyatah"],a:1},
+{cat:"Television",d:4,q:"On Mystery Science Theater 3000, Tom Servo and which other robot riff on bad movies?",c:["Crow T. Robot","Johnny 5","Twiki"],a:0},
+{cat:"Television",d:4,q:"Garry Shandling's The Larry Sanders Show (1992) aired on which network?",c:["Showtime","Comedy Central","HBO"],a:2},
+{cat:"Television",d:4,q:"ER was created by which best-selling author?",c:["Stephen King","John Grisham","Michael Crichton"],a:2},
+{cat:"Television",d:4,q:"On My So-Called Life (1994), Claire Danes plays which teenager?",c:["Rayanne Graff","Sharon Cherski","Angela Chase"],a:2},
+{cat:"Television",d:5,q:"On Cheers, the bar sits directly beneath which upstairs restaurant?",c:["The Hungry Heifer","Maison Robert","Melville's"],a:2},
+{cat:"Television",d:5,q:"On Married... with Children, what is Peggy Bundy's maiden name?",c:["D'Arcy","Rhoades","Wanker"],a:2},
+{cat:"Television",d:5,q:"Who voices the unseen adult narrator on The Wonder Years?",c:["Daniel Stern","Fred Savage","Bob Saget"],a:0},
+{cat:"Television",d:5,q:"Which future talk show host wrote The Simpsons episode 'Marge vs. the Monorail'?",c:["David Letterman","Jon Stewart","Conan O'Brien"],a:2},
+{cat:"Television",d:5,q:"The 1988 St. Elsewhere finale implies the entire series took place inside what?",c:["A snow globe","A coma dream","An unsold TV pilot"],a:0},
+{cat:"Television",d:5,q:"Saved by the Bell was retooled from which Disney Channel series?",c:["Kids Incorporated","Hey Dude","Good Morning, Miss Bliss"],a:2},
+{cat:"Television",d:5,q:"What is the full name of the Taylors' fence-hidden neighbor on Home Improvement?",c:["Wilson W. Wilson Jr.","Walter Wilson III","William Wilson Sr."],a:0},
+{cat:"Television",d:5,q:"On Full House, what is Uncle Jesse's Greek family surname?",c:["Gladstone","Stamos","Katsopolis"],a:2},
+{cat:"Television",d:5,q:"Nickelodeon's Hey Dude is set on which Arizona dude ranch?",c:["The Lazy J","The Double R","The Bar None"],a:2},
+{cat:"Television",d:5,q:"Who hosted Nickelodeon's Legends of the Hidden Temple?",c:["Kirk Fogg","Mike O'Malley","Phil Moore"],a:0},
+{cat:"Television",d:5,q:"Who played the Chief on Where in the World Is Carmen Sandiego?",c:["Nell Carter","Lynne Thigpen","Jackee Harry"],a:1},
+{cat:"Television",d:5,q:"Beavis and Butt-Head first appeared in a short on which MTV animation showcase?",c:["Cartoon Sushi","120 Minutes","Liquid Television"],a:2},
+{cat:"Television",d:5,q:"On TaleSpin, what is the name of Baloo's cargo seaplane?",c:["The Iron Vulture","The Spruce Moose","The Sea Duck"],a:2},
+{cat:"Television",d:5,q:"Doug, Rugrats, and which cartoon premiered together as Nickelodeon's first Nicktoons in August 1991?",c:["Rocko's Modern Life","Aaahh!!! Real Monsters","The Ren and Stimpy Show"],a:2},
+{cat:"Television",d:5,q:"Jerry Orbach joined Law and Order in 1992 as which detective?",c:["Mike Logan","Phil Cerreta","Lennie Briscoe"],a:2},
+{cat:"Television",d:5,q:"The bleak 1994 Dinosaurs finale ends with the Sinclair family facing what?",c:["A volcanic eruption","A meteor strike","An ice age"],a:2},
+{cat:"Television",d:5,q:"ALF's unresolved 1990 series finale ends with ALF captured by whom?",c:["The Tanners' neighbors","Melmacian bounty hunters","The military's Alien Task Force"],a:2},
+{cat:"Television",d:5,q:"Picket Fences is set in which small Wisconsin town?",c:["Rome","Athens","Sparta"],a:0},
+{cat:"Television",d:5,q:"On NewsRadio (1995), what are the call letters of the New York radio station?",c:["WKRP","WNYX","WENN"],a:1},
+{cat:"Television",d:5,q:"Ellen DeGeneres's ABC sitcom premiered in 1994 under what original title?",c:["The Ellen Show","These Friends of Mine","Open House"],a:1},
+{cat:"Television",d:5,q:"Which wrestling personality played Mario on The Super Mario Bros. Super Show (1989)?",c:["Captain Lou Albano","Rowdy Roddy Piper","Jesse Ventura"],a:0}
+);
+
+window.RETRO_BANK = window.RETRO_BANK || [];
+window.RETRO_BANK.push(
+{cat:"Music",d:1,q:"Which band released \"Smells Like Teen Spirit\" in 1991?",c:["Nirvana","Pearl Jam","Soundgarden"],a:0},
+{cat:"Music",d:1,q:"Who was the lead singer of Nirvana?",c:["Eddie Vedder","Kurt Cobain","Chris Cornell"],a:1},
+{cat:"Music",d:1,q:"Whitney Houston's 1992 smash \"I Will Always Love You\" came from which movie soundtrack?",c:["Ghost","Sister Act","The Bodyguard"],a:2},
+{cat:"Music",d:1,q:"Who released the hit single \"Like a Prayer\" in 1989?",c:["Paula Abdul","Janet Jackson","Madonna"],a:2},
+{cat:"Music",d:1,q:"What was Michael Jackson's 1987 follow-up album to Thriller?",c:["Bad","Dangerous","Off the Wall"],a:0},
+{cat:"Music",d:1,q:"Who rapped the 1990 chart-topper \"Ice Ice Baby\"?",c:["MC Hammer","Vanilla Ice","Snow"],a:1},
+{cat:"Music",d:1,q:"Who had the 1990 hit \"U Can't Touch This\"?",c:["Tone Loc","MC Hammer","Vanilla Ice"],a:1},
+{cat:"Music",d:1,q:"Which boy band hit it big in 1988 with \"Hangin' Tough\"?",c:["New Edition","Boyz II Men","New Kids on the Block"],a:2},
+{cat:"Music",d:1,q:"Which country star sang \"Friends in Low Places\" in 1990?",c:["Garth Brooks","Clint Black","Alan Jackson"],a:0},
+{cat:"Music",d:1,q:"Which band released \"Livin' on a Prayer\" in 1986?",c:["Bon Jovi","Def Leppard","Poison"],a:0},
+{cat:"Music",d:1,q:"Who rapped the 1992 hit \"Baby Got Back\"?",c:["Tone Loc","Young MC","Sir Mix-A-Lot"],a:2},
+{cat:"Music",d:1,q:"Who is the lead singer of Pearl Jam?",c:["Scott Weiland","Eddie Vedder","Layne Staley"],a:1},
+{cat:"Music",d:1,q:"Which band released \"Sweet Child O' Mine\" in 1987?",c:["Aerosmith","Motley Crue","Guns N' Roses"],a:2},
+{cat:"Music",d:1,q:"Who is the lead singer of U2?",c:["Bono","The Edge","Adam Clayton"],a:0},
+{cat:"Music",d:1,q:"Which band had the 1992 hit \"Under the Bridge\"?",c:["Jane's Addiction","Red Hot Chili Peppers","Stone Temple Pilots"],a:1},
+{cat:"Music",d:1,q:"Who rapped the 1995 smash \"Gangsta's Paradise\"?",c:["Ice Cube","Coolio","Warren G"],a:1},
+{cat:"Music",d:1,q:"Which band released \"Losing My Religion\" in 1991?",c:["R.E.M.","The Cure","Depeche Mode"],a:0},
+{cat:"Music",d:1,q:"Bryan Adams' 1991 hit \"(Everything I Do) I Do It for You\" was the theme of which film?",c:["Batman","Ghost","Robin Hood: Prince of Thieves"],a:2},
+{cat:"Music",d:1,q:"Which Swedish group topped US charts in 1994 with \"The Sign\"?",c:["Ace of Base","Roxette","Army of Lovers"],a:0},
+{cat:"Music",d:1,q:"Which trio had the 1995 #1 hit \"Waterfalls\"?",c:["En Vogue","TLC","SWV"],a:1},
+{cat:"Music",d:1,q:"Which metal band released \"Enter Sandman\" in 1991?",c:["Megadeth","Anthrax","Metallica"],a:2},
+{cat:"Music",d:2,q:"Which hair metal band had the 1988 #1 power ballad \"Every Rose Has Its Thorn\"?",c:["Poison","Warrant","Cinderella"],a:0},
+{cat:"Music",d:2,q:"\"Pour Some Sugar on Me\" appeared on which 1987 Def Leppard album?",c:["Pyromania","Hysteria","Adrenalize"],a:1},
+{cat:"Music",d:2,q:"What was the Beastie Boys' 1986 debut album?",c:["Ill Communication","Check Your Head","Licensed to Ill"],a:2},
+{cat:"Music",d:2,q:"What was Dr. Dre's 1992 solo debut album?",c:["Straight Outta Compton","Doggystyle","The Chronic"],a:2},
+{cat:"Music",d:2,q:"What was Snoop Doggy Dogg's 1993 debut album?",c:["Doggystyle","Tha Doggfather","No Limit Top Dogg"],a:0},
+{cat:"Music",d:2,q:"Who wrote Sinead O'Connor's 1990 #1 hit \"Nothing Compares 2 U\"?",c:["George Michael","Prince","Bono"],a:1},
+{cat:"Music",d:2,q:"What was Green Day's 1994 major-label breakthrough album?",c:["Kerplunk","Dookie","Insomniac"],a:1},
+{cat:"Music",d:2,q:"Which artist released the 1995 blockbuster album Jagged Little Pill?",c:["Sheryl Crow","Jewel","Alanis Morissette"],a:2},
+{cat:"Music",d:2,q:"What was Mariah Carey's 1990 debut single?",c:["Vision of Love","Hero","Emotions"],a:0},
+{cat:"Music",d:2,q:"Which 1992 Boyz II Men single came from the Boomerang soundtrack?",c:["End of the Road","I'll Make Love to You","Motownphilly"],a:0},
+{cat:"Music",d:2,q:"Which musician was the chief organizer of Live Aid in July 1985?",c:["Bono","Freddie Mercury","Bob Geldof"],a:2},
+{cat:"Music",d:2,q:"Run-DMC's 1986 remake of \"Walk This Way\" featured which rock band?",c:["Kiss","Aerosmith","Van Halen"],a:1},
+{cat:"Music",d:2,q:"Which duo had the 1991 novelty hit \"I'm Too Sexy\"?",c:["EMF","Jesus Jones","Right Said Fred"],a:2},
+{cat:"Music",d:2,q:"What was the title of Pearl Jam's 1991 debut album?",c:["Ten","Vs.","Vitalogy"],a:0},
+{cat:"Music",d:2,q:"Which group had the 1992 party anthem \"Jump Around\"?",c:["Cypress Hill","House of Pain","Onyx"],a:1},
+{cat:"Music",d:2,q:"Who sang the 1987 #1 \"I Wanna Dance with Somebody (Who Loves Me)\"?",c:["Janet Jackson","Whitney Houston","Paula Abdul"],a:1},
+{cat:"Music",d:2,q:"What was George Michael's 1987 solo debut album?",c:["Faith","Listen Without Prejudice Vol. 1","Older"],a:0},
+{cat:"Music",d:2,q:"Why was Milli Vanilli's 1990 Best New Artist Grammy revoked?",c:["They refused to accept it","They plagiarized another song","They did not sing on their own album"],a:2},
+{cat:"Music",d:2,q:"Who had the 1988 hit \"My Prerogative\"?",c:["Bobby Brown","Keith Sweat","Johnny Gill"],a:0},
+{cat:"Music",d:2,q:"Which group sang \"It Must Have Been Love\" from Pretty Woman (1990)?",c:["Eurythmics","Roxette","Wilson Phillips"],a:1},
+{cat:"Music",d:2,q:"Which group released \"The Humpty Dance\" in 1990?",c:["De La Soul","A Tribe Called Quest","Digital Underground"],a:2},
+{cat:"Music",d:3,q:"What image appears on the cover of Nirvana's 1991 album Nevermind?",c:["A baby swimming after a dollar bill","A yellow smiley face","A heart-shaped box"],a:0},
+{cat:"Music",d:3,q:"Which band had the 1994 hit \"Black Hole Sun\"?",c:["Alice in Chains","Soundgarden","Screaming Trees"],a:1},
+{cat:"Music",d:3,q:"Dr. Dre and Ice Cube first found fame together in which group?",c:["Public Enemy","EPMD","N.W.A"],a:2},
+{cat:"Music",d:3,q:"Which group recorded \"Fight the Power\" for the 1989 film Do the Right Thing?",c:["Boogie Down Productions","Eric B. & Rakim","Public Enemy"],a:2},
+{cat:"Music",d:3,q:"Madonna's 1990 hit \"Vogue\" appeared on an album tied to which film?",c:["Dick Tracy","Who's That Girl","A League of Their Own"],a:0},
+{cat:"Music",d:3,q:"Which band's 1985 video for \"Take On Me\" mixed pencil-sketch animation with live action?",c:["Tears for Fears","a-ha","Duran Duran"],a:1},
+{cat:"Music",d:3,q:"Who sang the \"I want my MTV\" line on Dire Straits' \"Money for Nothing\" (1985)?",c:["Bono","Sting","Peter Gabriel"],a:1},
+{cat:"Music",d:3,q:"Live Aid 1985 was staged simultaneously in London and which US city?",c:["New York","Chicago","Philadelphia"],a:2},
+{cat:"Music",d:3,q:"Who played both Live Aid shows in one day in 1985, crossing the Atlantic by Concorde?",c:["Phil Collins","David Bowie","Elton John"],a:0},
+{cat:"Music",d:3,q:"Eric Clapton wrote the 1992 ballad \"Tears in Heaven\" after the death of whom?",c:["His young son","His father","His band's drummer"],a:0},
+{cat:"Music",d:3,q:"Who had the 1992 country smash \"Achy Breaky Heart\"?",c:["Travis Tritt","Joe Diffie","Billy Ray Cyrus"],a:2},
+{cat:"Music",d:3,q:"How many weeks did Boyz II Men's \"I'll Make Love to You\" (1994) spend at #1?",c:["10","14","16"],a:1},
+{cat:"Music",d:3,q:"Who wrote and originally recorded \"I Will Always Love You\"?",c:["Linda Ronstadt","Tammy Wynette","Dolly Parton"],a:2},
+{cat:"Music",d:3,q:"Which band's 1991 ballad \"Wind of Change\" opens with whistling?",c:["Scorpions","Europe","Winger"],a:0},
+{cat:"Music",d:3,q:"Which band hit #1 in 1991 with the acoustic ballad \"More Than Words\"?",c:["Mr. Big","Extreme","Firehouse"],a:1},
+{cat:"Music",d:3,q:"Which Irish band released \"Zombie\" in 1994?",c:["The Corrs","The Cranberries","Hothouse Flowers"],a:1},
+{cat:"Music",d:3,q:"\"Wonderwall\" appeared on which 1995 Oasis album?",c:["(What's the Story) Morning Glory?","Definitely Maybe","Be Here Now"],a:0},
+{cat:"Music",d:3,q:"\"Ice Ice Baby\" lifted its bassline from \"Under Pressure\" by Queen and which artist?",c:["Elton John","Rod Stewart","David Bowie"],a:2},
+{cat:"Music",d:3,q:"\"U Can't Touch This\" was built on which Rick James groove?",c:["Super Freak","Give It to Me Baby","Mary Jane"],a:0},
+{cat:"Music",d:3,q:"What was the title of Janet Jackson's hit 1989 album?",c:["Control","Rhythm Nation 1814","janet."],a:1},
+{cat:"Music",d:3,q:"Paula Abdul danced with which animated cat in the \"Opposites Attract\" video?",c:["Felix the Cat","Top Cat","MC Skat Kat"],a:2},
+{cat:"Music",d:4,q:"Who produced Nirvana's Nevermind (1991)?",c:["Butch Vig","Steve Albini","Rick Rubin"],a:0},
+{cat:"Music",d:4,q:"Which Seattle indie label released Nirvana's 1989 debut Bleach?",c:["Kill Rock Stars","Sub Pop","C/Z Records"],a:1},
+{cat:"Music",d:4,q:"The 1991 Temple of the Dog album was a tribute to which late Seattle singer?",c:["Kurt Cobain","Shannon Hoon","Andrew Wood"],a:2},
+{cat:"Music",d:4,q:"Which Pearl Jam video won Video of the Year at the 1993 MTV VMAs?",c:["Alive","Even Flow","Jeremy"],a:2},
+{cat:"Music",d:4,q:"Dr. Dre co-founded which record label with Suge Knight?",c:["Death Row","Bad Boy","Ruthless"],a:0},
+{cat:"Music",d:4,q:"What was Tupac Shakur's 1991 debut album?",c:["Me Against the World","2Pacalypse Now","All Eyez on Me"],a:1},
+{cat:"Music",d:4,q:"Which production team crafted the sample collage of the Beastie Boys' Paul's Boutique (1989)?",c:["The Bomb Squad","The Dust Brothers","Rick Rubin"],a:1},
+{cat:"Music",d:4,q:"Lionel Richie co-wrote 1985's \"We Are the World\" with which artist?",c:["Stevie Wonder","Quincy Jones","Michael Jackson"],a:2},
+{cat:"Music",d:4,q:"R.E.M.'s 1992 song \"Man on the Moon\" pays tribute to which comedian?",c:["Andy Kaufman","John Belushi","Sam Kinison"],a:0},
+{cat:"Music",d:4,q:"Which 1993 Smashing Pumpkins album features \"Today\" and \"Cherub Rock\"?",c:["Siamese Dream","Gish","Mellon Collie and the Infinite Sadness"],a:0},
+{cat:"Music",d:4,q:"Who fronted Hole on the 1994 album Live Through This?",c:["Kim Gordon","Kat Bjelland","Courtney Love"],a:2},
+{cat:"Music",d:4,q:"\"Plush\" appeared on which 1992 Stone Temple Pilots debut album?",c:["Purple","Core","Tiny Music"],a:1},
+{cat:"Music",d:4,q:"Who sang lead on Alice in Chains' 1990 song \"Man in the Box\"?",c:["Chris Cornell","Mark Lanegan","Layne Staley"],a:2},
+{cat:"Music",d:4,q:"Which band had the 1990 hit \"Epic\"?",c:["Faith No More","Living Colour","Primus"],a:0},
+{cat:"Music",d:4,q:"Which Jane's Addiction singer founded the Lollapalooza tour in 1991?",c:["Dave Navarro","Perry Farrell","Henry Rollins"],a:1},
+{cat:"Music",d:4,q:"Coolio's \"Gangsta's Paradise\" (1995) reworks which Stevie Wonder song?",c:["Higher Ground","Pastime Paradise","Living for the City"],a:1},
+{cat:"Music",d:4,q:"Which 1991 Garth Brooks album was the first country record to debut at #1 on the Billboard 200?",c:["Ropin' the Wind","No Fences","The Chase"],a:0},
+{cat:"Music",d:4,q:"What was the Wu-Tang Clan's 1993 debut album?",c:["Liquid Swords","Return to the 36 Chambers","Enter the Wu-Tang (36 Chambers)"],a:2},
+{cat:"Music",d:4,q:"The Notorious B.I.G.'s Ready to Die (1994) was released on which label?",c:["Bad Boy","Death Row","Def Jam"],a:0},
+{cat:"Music",d:4,q:"A Tribe Called Quest's \"Can I Kick It?\" (1990) samples which Lou Reed song?",c:["Perfect Day","Walk on the Wild Side","Sweet Jane"],a:1},
+{cat:"Music",d:4,q:"Which 1990 LL Cool J track opens with \"Don't call it a comeback\"?",c:["I'm Bad","Rock the Bells","Mama Said Knock You Out"],a:2},
+{cat:"Music",d:5,q:"The title \"Smells Like Teen Spirit\" came from graffiti written by which Bikini Kill member?",c:["Kathleen Hanna","Tobi Vail","Kathi Wilcox"],a:0},
+{cat:"Music",d:5,q:"Before joining Nirvana, Dave Grohl drummed for which Washington DC hardcore band?",c:["Fugazi","Scream","Minor Threat"],a:1},
+{cat:"Music",d:5,q:"Pearl Jam originally performed under the name of which NBA player?",c:["Dominique Wilkins","Spud Webb","Mookie Blaylock"],a:2},
+{cat:"Music",d:5,q:"In 1994, Pearl Jam testified before Congress in a dispute with which company?",c:["MTV Networks","BMI","Ticketmaster"],a:2},
+{cat:"Music",d:5,q:"Brothers from which band joined Nirvana onstage for their 1993 MTV Unplugged set?",c:["Meat Puppets","Melvins","Screaming Trees"],a:0},
+{cat:"Music",d:5,q:"Which 1992 Cameron Crowe film set in the Seattle grunge scene featured Pearl Jam members?",c:["Reality Bites","Singles","Empire Records"],a:1},
+{cat:"Music",d:5,q:"Which band opened Live Aid at Wembley in 1985 with \"Rockin' All Over the World\"?",c:["Ultravox","Status Quo","The Style Council"],a:1},
+{cat:"Music",d:5,q:"Rob Pilatus's partner in Milli Vanilli was whom?",c:["Frank Farian","Charles Shaw","Fab Morvan"],a:2},
+{cat:"Music",d:5,q:"Who directed the Beastie Boys' 1994 cop-show spoof video for \"Sabotage\"?",c:["Spike Jonze","Michel Gondry","David Fincher"],a:0},
+{cat:"Music",d:5,q:"Weezer's 1994 \"Buddy Holly\" video placed the band inside which classic sitcom?",c:["Happy Days","Cheers","Laverne & Shirley"],a:0},
+{cat:"Music",d:5,q:"Who directed Michael Jackson's 1991 \"Black or White\" video?",c:["Martin Scorsese","David Fincher","John Landis"],a:2},
+{cat:"Music",d:5,q:"Who directed the costly 1995 Michael and Janet Jackson video \"Scream\"?",c:["Hype Williams","Mark Romanek","Mark Pellington"],a:1},
+{cat:"Music",d:5,q:"\"Nothing Compares 2 U\" was first recorded in 1985 by which Prince side project?",c:["The Time","Vanity 6","The Family"],a:2},
+{cat:"Music",d:5,q:"In the August 1995 Britpop battle, Blur's \"Country House\" beat which Oasis single to UK #1?",c:["Roll With It","Some Might Say","Cigarettes & Alcohol"],a:0},
+{cat:"Music",d:5,q:"Warren G's \"Regulate\" (1994) samples which Michael McDonald song?",c:["What a Fool Believes","I Keep Forgettin' (Every Time You're Near)","Sweet Freedom"],a:1},
+{cat:"Music",d:5,q:"Which Zapp frontman supplied the talk-box vocals on 2Pac's \"California Love\" (1995)?",c:["Bootsy Collins","Roger Troutman","George Clinton"],a:1},
+{cat:"Music",d:5,q:"Naughty by Nature's \"O.P.P.\" (1991) samples which Jackson 5 hit?",c:["ABC","I Want You Back","The Love You Save"],a:0},
+{cat:"Music",d:5,q:"Who won the first-ever Grammy for Best Rap Performance in 1989?",c:["Run-DMC","LL Cool J","DJ Jazzy Jeff & The Fresh Prince"],a:2},
+{cat:"Music",d:5,q:"Who was the original host of Yo! MTV Raps when it debuted in 1988?",c:["Fab 5 Freddy","Ed Lover","Doctor Dre"],a:0},
+{cat:"Music",d:5,q:"Which new jack swing producer shaped much of Michael Jackson's Dangerous (1991)?",c:["Jimmy Jam","Teddy Riley","Babyface"],a:1},
+{cat:"Music",d:5,q:"Dr. Dre's G-funk sound on The Chronic leaned heavily on samples of which funk collective?",c:["Earth, Wind & Fire","Kool & the Gang","Parliament-Funkadelic"],a:2}
+);
+
+window.RETRO_BANK = window.RETRO_BANK || [];
+window.RETRO_BANK.push(
+{cat:"Video Games",d:1,q:"What is the name of Mario's brother?",c:["Wario","Luigi","Toad"],a:1},
+{cat:"Video Games",d:1,q:"What kind of animal is Sonic, Sega's mascot?",c:["A fox","An armadillo","A hedgehog"],a:2},
+{cat:"Video Games",d:1,q:"What is Mario's famous occupation?",c:["Plumber","Carpenter","Chef"],a:0},
+{cat:"Video Games",d:1,q:"Which princess does Mario usually rescue?",c:["Princess Zelda","Princess Peach","Princess Daisy"],a:1},
+{cat:"Video Games",d:1,q:"What is the name of the green-clad hero of The Legend of Zelda?",c:["Link","Zelda","Ganon"],a:0},
+{cat:"Video Games",d:1,q:"Which company released the Game Boy handheld in 1989?",c:["Sega","Atari","Nintendo"],a:2},
+{cat:"Video Games",d:1,q:"What does Sonic the Hedgehog collect to stay alive?",c:["Gold rings","Coins","Gems"],a:0},
+{cat:"Video Games",d:1,q:"Who is Mario's fire-breathing arch-enemy?",c:["Donkey Kong","Wario","Bowser"],a:2},
+{cat:"Video Games",d:1,q:"What kind of creature is Mario's pal Yoshi?",c:["A dinosaur","A dragon","A turtle"],a:0},
+{cat:"Video Games",d:1,q:"What does NES stand for?",c:["Nintendo Entertainment System","Nintendo Electronic System","New Entertainment System"],a:0},
+{cat:"Video Games",d:1,q:"Which company made the Genesis console?",c:["Nintendo","Sega","Atari"],a:1},
+{cat:"Video Games",d:1,q:"Street Fighter II is what type of game?",c:["A racing game","A puzzle game","A fighting game"],a:2},
+{cat:"Video Games",d:1,q:"In Tetris, what do players stack and clear?",c:["Falling blocks","Playing cards","Bouncing balls"],a:0},
+{cat:"Video Games",d:1,q:"Doom (1993) helped popularize which genre?",c:["First-person shooter","Platformer","Sports sim"],a:0},
+{cat:"Video Games",d:1,q:"What color is Sonic the Hedgehog?",c:["Green","Red","Blue"],a:2},
+{cat:"Video Games",d:1,q:"What phrase flashes in Mortal Kombat when it is time for a finishing move?",c:["Game Over!","Finish Him!","Fight!"],a:1},
+{cat:"Video Games",d:1,q:"Which accessory was used to play Duck Hunt on the NES?",c:["The Zapper light gun","The Power Glove","The Power Pad"],a:0},
+{cat:"Video Games",d:1,q:"In Super Mario Bros., what happens when Mario grabs a Super Mushroom?",c:["He turns invisible","He grows bigger","He gets a kart"],a:1},
+{cat:"Video Games",d:1,q:"What color is Kirby?",c:["Pink","Yellow","Blue"],a:0},
+{cat:"Video Games",d:1,q:"What kind of animal is Donkey Kong?",c:["A bear","An elephant","A gorilla"],a:2},
+{cat:"Video Games",d:1,q:"In Super Mario Bros., collecting 100 of what earns an extra life?",c:["Stars","Coins","Mushrooms"],a:1},
+{cat:"Video Games",d:2,q:"What is the name of Sonic's two-tailed fox sidekick, introduced in 1992?",c:["Knuckles","Tails","Espio"],a:1},
+{cat:"Video Games",d:2,q:"Who is the egg-shaped scientist villain of the Sonic series?",c:["Dr. Robotnik","Dr. Wily","Dr. Light"],a:0},
+{cat:"Video Games",d:2,q:"In Super Mario Bros., what power does the Fire Flower grant?",c:["Flying","Super speed","Throwing fireballs"],a:2},
+{cat:"Video Games",d:2,q:"Who is the pig-like archvillain of the early Legend of Zelda games?",c:["Wart","Ganon","King Dedede"],a:1},
+{cat:"Video Games",d:2,q:"What golden relic does Link quest for in The Legend of Zelda (1986)?",c:["The Triforce","The Moon Pearl","The Star Rod"],a:0},
+{cat:"Video Games",d:2,q:"Which company created Mega Man in 1987?",c:["Konami","Sega","Capcom"],a:2},
+{cat:"Video Games",d:2,q:"Which studio developed Doom (1993)?",c:["id Software","Sierra","LucasArts"],a:0},
+{cat:"Video Games",d:2,q:"Which game came packed in with the Game Boy at its 1989 US launch?",c:["Super Mario Land","Alleyway","Tetris"],a:2},
+{cat:"Video Games",d:2,q:"What is the name of Ryu and Ken's fireball move in Street Fighter II?",c:["Shoryuken","Hadouken","Sonic Boom"],a:1},
+{cat:"Video Games",d:2,q:"What are Mortal Kombat's gruesome finishing moves called?",c:["Fatalities","Executions","Overkills"],a:0},
+{cat:"Video Games",d:2,q:"Who is the armored bounty hunter you play in Metroid?",c:["Ridley","Samus Aran","Kraid"],a:1},
+{cat:"Video Games",d:2,q:"In Contra on the NES, what did the famous Konami Code grant?",c:["Level select","Infinite ammo","30 lives"],a:2},
+{cat:"Video Games",d:2,q:"Which real boxer was the final opponent in Punch-Out!! on the NES (1987)?",c:["Mike Tyson","Evander Holyfield","George Foreman"],a:0},
+{cat:"Video Games",d:2,q:"Which 1993 SNES shooter starred pilot Fox McCloud?",c:["F-Zero","Star Fox","Pilotwings"],a:1},
+{cat:"Video Games",d:2,q:"Donkey Kong Country (1994) was released for which console?",c:["Sega Genesis","NES","Super Nintendo"],a:2},
+{cat:"Video Games",d:2,q:"Which Sega console came before the Genesis?",c:["Master System","Saturn","Game Gear"],a:0},
+{cat:"Video Games",d:2,q:"Which Mortal Kombat fighter yells \"Get over here!\" while throwing his spear?",c:["Sub-Zero","Scorpion","Raiden"],a:1},
+{cat:"Video Games",d:2,q:"Which company made the Final Fantasy games of this era?",c:["Enix","Capcom","Squaresoft"],a:2},
+{cat:"Video Games",d:2,q:"In NBA Jam, what does the announcer shout after a player's third straight basket?",c:["He's on fire!","Boomshakalaka!","From downtown!"],a:0},
+{cat:"Video Games",d:2,q:"Which game was bundled with the Super Nintendo at its 1991 US launch?",c:["Super Mario Bros. 3","Super Mario World","Donkey Kong Country"],a:1},
+{cat:"Video Games",d:2,q:"In Super Mario Kart (1992), which thrown item homes in on the racer ahead?",c:["Green shell","Banana peel","Red shell"],a:2},
+{cat:"Video Games",d:3,q:"What was the Sega Genesis called in Europe and Japan?",c:["Mega Drive","Master Drive","Super Drive"],a:0},
+{cat:"Video Games",d:3,q:"In what year did the Super Nintendo launch in the US?",c:["1989","1991","1993"],a:1},
+{cat:"Video Games",d:3,q:"Complete Sega's jab at Nintendo: \"Genesis does what ___\"",c:["Nintendoesn't","Nintendo can't","Nintendon't"],a:2},
+{cat:"Video Games",d:3,q:"How many playable World Warriors did the original Street Fighter II (1991) have?",c:["Eight","Six","Twelve"],a:0},
+{cat:"Video Games",d:3,q:"Who was the first playable female fighter in the Street Fighter series?",c:["Cammy","Chun-Li","Rose"],a:1},
+{cat:"Video Games",d:3,q:"What made Mortal Kombat's (1992) look so distinctive for its time?",c:["Cel animation","3D polygons","Digitized live actors"],a:2},
+{cat:"Video Games",d:3,q:"US Senate hearings over Mortal Kombat led to which ratings board in 1994?",c:["ESRB","MPAA","PEGI"],a:0},
+{cat:"Video Games",d:3,q:"In what year was Doom first released?",c:["1991","1993","1995"],a:1},
+{cat:"Video Games",d:3,q:"Which 1992 id Software shooter had players escape a Nazi castle?",c:["Blake Stone","Rise of the Triad","Wolfenstein 3D"],a:2},
+{cat:"Video Games",d:3,q:"Which 1993 CD-ROM puzzle adventure became the decade's best-selling PC game?",c:["Myst","The 7th Guest","Return to Zork"],a:0},
+{cat:"Video Games",d:3,q:"Which SNES feature rotated and scaled backgrounds in F-Zero and Super Mario Kart?",c:["Blast Processing","Mode 7","Dual Play"],a:1},
+{cat:"Video Games",d:3,q:"Chrono Trigger (1995) debuted on which system?",c:["PlayStation","Sega Saturn","Super Nintendo"],a:2},
+{cat:"Video Games",d:3,q:"The Legend of Zelda: Link's Awakening (1993) was released on which system?",c:["Game Boy","NES","Super Nintendo"],a:0},
+{cat:"Video Games",d:3,q:"Under what title was Final Fantasy VI first released in the US in 1994?",c:["Final Fantasy II","Final Fantasy III","Final Fantasy IV"],a:1},
+{cat:"Video Games",d:3,q:"Who is the recurring mad-scientist villain of the Mega Man series?",c:["Dr. Cossack","Dr. Robotnik","Dr. Wily"],a:2},
+{cat:"Video Games",d:3,q:"In Castlevania, what is the surname of the whip-wielding vampire-hunting family?",c:["Belmont","Harker","Tepes"],a:0},
+{cat:"Video Games",d:3,q:"In which year did the PlayStation first launch in Japan?",c:["1993","1994","1995"],a:1},
+{cat:"Video Games",d:3,q:"Which 1993 Sega arcade game pioneered 3D polygonal fighting?",c:["Tekken","Battle Arena Toshinden","Virtua Fighter"],a:2},
+{cat:"Video Games",d:3,q:"What was the NES called in Japan?",c:["Famicom","Super Famicom","PC Engine"],a:0},
+{cat:"Video Games",d:3,q:"Which Nintendo designer created both Mario and Zelda?",c:["Gunpei Yokoi","Shigeru Miyamoto","Hironobu Sakaguchi"],a:1},
+{cat:"Video Games",d:3,q:"Tetris creator Alexey Pajitnov designed the game in 1984 in which country?",c:["Japan","Hungary","The Soviet Union"],a:2},
+{cat:"Video Games",d:4,q:"Sony's PlayStation grew out of a scrapped CD-ROM add-on planned for which console?",c:["Sega Genesis","3DO","Super Nintendo"],a:2},
+{cat:"Video Games",d:4,q:"The Sega 32X (1994) was an add-on that plugged into which console?",c:["Genesis","Saturn","Game Gear"],a:0},
+{cat:"Video Games",d:4,q:"Which electronics giant sold the TurboGrafx-16 in the US?",c:["Philips","NEC","Sanyo"],a:1},
+{cat:"Video Games",d:4,q:"Which company sold the notoriously expensive Neo Geo home console?",c:["SNK","Capcom","Taito"],a:0},
+{cat:"Video Games",d:4,q:"Atari's 1993 Jaguar console was marketed as having how many bits?",c:["32","128","64"],a:2},
+{cat:"Video Games",d:4,q:"Which head-bonking caveman served as the TurboGrafx-16's mascot?",c:["Alex Kidd","Bonk","Chuck Rock"],a:1},
+{cat:"Video Games",d:4,q:"Which Street Fighter II update first made the four boss characters playable?",c:["Champion Edition","Turbo: Hyper Fighting","Super Street Fighter II"],a:0},
+{cat:"Video Games",d:4,q:"Who was the secret hidden fighter in the original Mortal Kombat (1992)?",c:["Smoke","Noob Saibot","Reptile"],a:2},
+{cat:"Video Games",d:4,q:"Which Sony engineer designed the SNES sound chip and later led the PlayStation?",c:["Norio Ohga","Ken Kutaragi","Akio Morita"],a:1},
+{cat:"Video Games",d:4,q:"Which metallic Sonic rival first appeared in Sonic CD (1993)?",c:["Metal Sonic","Mecha Sonic","Silver Sonic"],a:0},
+{cat:"Video Games",d:4,q:"Which color-screen Sega handheld hit the US in 1991 to fight the Game Boy?",c:["Sega Nomad","Game Gear","Mega Jet"],a:1},
+{cat:"Video Games",d:4,q:"Which 1989 handheld was the first with a color LCD screen?",c:["Game Gear","TurboExpress","Atari Lynx"],a:2},
+{cat:"Video Games",d:4,q:"Which special chip inside the Star Fox (1993) cartridge powered its 3D polygons?",c:["Super FX","SA-1","DSP-1"],a:0},
+{cat:"Video Games",d:4,q:"Which British studio developed Donkey Kong Country for Nintendo?",c:["Argonaut","Rare","Psygnosis"],a:1},
+{cat:"Video Games",d:4,q:"What was the blood code for Mortal Kombat on the Sega Genesis?",c:["DULLARD","BLOODY","ABACABB"],a:2},
+{cat:"Video Games",d:4,q:"In the SNES version of Mortal Kombat (1993), blood was recolored into what?",c:["Gray sweat","Green slime","Blue sparks"],a:0},
+{cat:"Video Games",d:4,q:"Which Zelda game switched to side-scrolling combat and experience points?",c:["A Link to the Past","Zelda II: The Adventure of Link","Link's Awakening"],a:1},
+{cat:"Video Games",d:4,q:"With a multitap, how many players could battle together in Secret of Mana (1993)?",c:["Two","Four","Three"],a:2},
+{cat:"Video Games",d:4,q:"EarthBound (1995) is known in Japan by what title?",c:["Mother 2","Ness's Quest","Magicant"],a:0},
+{cat:"Video Games",d:4,q:"Which Nintendo engineer led the creation of the Game Boy?",c:["Masayuki Uemura","Gunpei Yokoi","Genyo Takeda"],a:1},
+{cat:"Video Games",d:4,q:"Who ran Sega of America during the height of the 16-bit console war?",c:["Howard Lincoln","Hiroshi Yamauchi","Tom Kalinske"],a:2},
+{cat:"Video Games",d:5,q:"Which CPU powered the Sega Genesis?",c:["Zilog Z80","Motorola 68000","MOS 6502"],a:1},
+{cat:"Video Games",d:5,q:"The Super Nintendo's CPU was based on which processor?",c:["The 65C816","The Motorola 68000","The Intel 8086"],a:0},
+{cat:"Video Games",d:5,q:"What was Nintendo's lockout chip that blocked unlicensed NES cartridges?",c:["MMC1","VRC6","10NES"],a:2},
+{cat:"Video Games",d:5,q:"Which publisher's unlicensed 1989 NES Tetris was pulled after Nintendo won in court?",c:["Tengen","Color Dreams","Camerica"],a:0},
+{cat:"Video Games",d:5,q:"How many shades could the original Game Boy screen display?",c:["Two","Eight","Four"],a:2},
+{cat:"Video Games",d:5,q:"Who composed the Sonic the Hedgehog (1991) soundtrack, a bassist for Dreams Come True?",c:["Yuzo Koshiro","Masato Nakamura","Koji Kondo"],a:1},
+{cat:"Video Games",d:5,q:"Who was the lead programmer of the original Sonic the Hedgehog?",c:["Yuji Naka","Naoto Ohshima","Hirokazu Yasuhara"],a:0},
+{cat:"Video Games",d:5,q:"Which duo created Mortal Kombat at Midway?",c:["Eugene Jarvis and Larry DeMar","John Carmack and John Romero","Ed Boon and John Tobias"],a:2},
+{cat:"Video Games",d:5,q:"Doom's (1993) first episode is set on which Martian moon?",c:["Deimos","Phobos","Europa"],a:1},
+{cat:"Video Games",d:5,q:"Which actor played Scorpion, Sub-Zero, and Reptile in the original Mortal Kombat?",c:["Daniel Pesina","Richard Divizio","Carlos Pesina"],a:0},
+{cat:"Video Games",d:5,q:"Who is the final boss of Wolfenstein 3D's third episode?",c:["Hans Grosse","General Fettgesicht","Hitler in a mech suit"],a:2},
+{cat:"Video Games",d:5,q:"Which studio, founded by David Perry, developed Earthworm Jim (1994)?",c:["Shiny Entertainment","Digital Eclipse","Blizzard Entertainment"],a:0},
+{cat:"Video Games",d:5,q:"Which studio developed the SNES version of Disney's Aladdin (1993)?",c:["Virgin Games","Capcom","Westwood Studios"],a:1},
+{cat:"Video Games",d:5,q:"Which famous manga artist drew the character designs for Chrono Trigger (1995)?",c:["Katsuhiro Otomo","Rumiko Takahashi","Akira Toriyama"],a:2},
+{cat:"Video Games",d:5,q:"Who composed the arcade soundtrack of Street Fighter II, later famed for Kingdom Hearts?",c:["Yoko Shimomura","Nobuo Uematsu","Michiru Yamane"],a:0},
+{cat:"Video Games",d:5,q:"What did Sega call the cartridge-stacking feature of Sonic & Knuckles (1994)?",c:["Power Base Converter","Lock-On Technology","Mega Bridge"],a:1},
+{cat:"Video Games",d:5,q:"At what price did Sega surprise-launch the Saturn in the US in May 1995?",c:["$299","$349","$399"],a:2},
+{cat:"Video Games",d:5,q:"What US launch price did Sony announce for the PlayStation at E3 1995?",c:["$299","$399","$449"],a:0},
+{cat:"Video Games",d:5,q:"Donkey Kong Country's pre-rendered graphics were built on workstations from which firm?",c:["Sun Microsystems","Silicon Graphics","Cray"],a:1},
+{cat:"Video Games",d:5,q:"Who created Kirby at HAL Laboratory?",c:["Satoru Iwata","Shigesato Itoi","Masahiro Sakurai"],a:2},
+{cat:"Video Games",d:5,q:"Which studio built Heretic (1994) on the licensed Doom engine?",c:["Raven Software","Apogee","3D Realms"],a:0}
+);
+
+window.RETRO_BANK = window.RETRO_BANK || [];
+window.RETRO_BANK.push(
+{cat:"Sports",d:1,q:"Which NBA team did Michael Jordan lead to championships in the early 1990s?",c:["Chicago Bulls","New York Knicks","Detroit Pistons"],a:0},
+{cat:"Sports",d:1,q:"What was hockey star Wayne Gretzky's famous nickname?",c:["The Golden Jet","The Rocket","The Great One"],a:2},
+{cat:"Sports",d:1,q:"Mike Tyson dominated which sport in the late 1980s?",c:["Wrestling","Boxing","Football"],a:1},
+{cat:"Sports",d:1,q:"The 1992 US Dream Team competed in which Olympic sport?",c:["Volleyball","Basketball","Baseball"],a:1},
+{cat:"Sports",d:1,q:"The 1992 Summer Olympics in Barcelona were held in which country?",c:["Spain","Italy","France"],a:0},
+{cat:"Sports",d:1,q:"Magic Johnson starred for which NBA team?",c:["Boston Celtics","Chicago Bulls","Los Angeles Lakers"],a:2},
+{cat:"Sports",d:1,q:"Larry Bird spent his whole NBA career with which team?",c:["Boston Celtics","Philadelphia 76ers","Indiana Pacers"],a:0},
+{cat:"Sports",d:1,q:"The Super Bowl decides the championship of which league?",c:["NBA","NFL","NHL"],a:1},
+{cat:"Sports",d:1,q:"Which country hosted the 1994 soccer World Cup?",c:["Mexico","Italy","United States"],a:2},
+{cat:"Sports",d:1,q:"Nancy Kerrigan, attacked before the 1994 Olympics, competed in which sport?",c:["Skiing","Speed skating","Figure skating"],a:2},
+{cat:"Sports",d:1,q:"Who shocked the world by knocking out Mike Tyson in 1990?",c:["Evander Holyfield","Buster Douglas","George Foreman"],a:1},
+{cat:"Sports",d:1,q:"Wayne Gretzky was traded in 1988 to which NHL team?",c:["Los Angeles Kings","New York Rangers","Detroit Red Wings"],a:0},
+{cat:"Sports",d:1,q:"Joe Montana won Super Bowls in the 1980s as quarterback of which team?",c:["Dallas Cowboys","San Francisco 49ers","Miami Dolphins"],a:1},
+{cat:"Sports",d:1,q:"Andre Agassi became a star in which sport?",c:["Tennis","Golf","Baseball"],a:0},
+{cat:"Sports",d:1,q:"Which company made Michael Jordan's Air Jordan sneakers?",c:["Reebok","Adidas","Nike"],a:2},
+{cat:"Sports",d:1,q:"Who scored the \"Hand of God\" goal at the 1986 World Cup?",c:["Diego Maradona","Pele","Zico"],a:0},
+{cat:"Sports",d:1,q:"What cut the 1994 Major League Baseball season short?",c:["An earthquake","A TV blackout","A players' strike"],a:2},
+{cat:"Sports",d:1,q:"In 1991 Magic Johnson retired after announcing he had contracted what?",c:["Hepatitis","HIV","Lyme disease"],a:1},
+{cat:"Sports",d:1,q:"Baseball legend Nolan Ryan was famous as a record-setting what?",c:["Home run slugger","Shortstop","Pitcher"],a:2},
+{cat:"Sports",d:1,q:"The Stanley Cup is the championship trophy of which sport?",c:["Basketball","Hockey","Soccer"],a:1},
+{cat:"Sports",d:1,q:"Emmitt Smith ran to stardom in the early 1990s with which NFL team?",c:["Dallas Cowboys","Buffalo Bills","Washington Redskins"],a:0},
+{cat:"Sports",d:2,q:"Which team won Super Bowl XX in January 1986?",c:["New England Patriots","Chicago Bears","Miami Dolphins"],a:1},
+{cat:"Sports",d:2,q:"Which team won the 1986 World Series?",c:["New York Mets","Boston Red Sox","Houston Astros"],a:0},
+{cat:"Sports",d:2,q:"Kirk Gibson hit his famous 1988 World Series home run for which team?",c:["Oakland Athletics","Detroit Tigers","Los Angeles Dodgers"],a:2},
+{cat:"Sports",d:2,q:"Which nation won the 1990 World Cup in Italy?",c:["West Germany","Argentina","Brazil"],a:0},
+{cat:"Sports",d:2,q:"Which nation won the 1994 World Cup, decided on penalty kicks?",c:["Italy","Brazil","Germany"],a:1},
+{cat:"Sports",d:2,q:"In what year did the Bulls complete their first three-peat of NBA titles?",c:["1991","1992","1993"],a:2},
+{cat:"Sports",d:2,q:"Which country hosted the 1994 Winter Olympics in Lillehammer?",c:["Sweden","Norway","Finland"],a:1},
+{cat:"Sports",d:2,q:"The 1988 Summer Olympics were held in which city?",c:["Seoul","Tokyo","Barcelona"],a:0},
+{cat:"Sports",d:2,q:"Why was sprinter Ben Johnson stripped of his 1988 Olympic 100m gold?",c:["A failed drug test","A false start","A betting scandal"],a:0},
+{cat:"Sports",d:2,q:"After retiring from the NBA in 1993, Michael Jordan tried which sport?",c:["Golf","Football","Baseball"],a:2},
+{cat:"Sports",d:2,q:"How many straight Super Bowls did the Buffalo Bills lose from 1991 to 1994?",c:["Three","Four","Five"],a:1},
+{cat:"Sports",d:2,q:"The Dream Team beat which country in the 1992 Olympic gold medal game?",c:["Lithuania","Spain","Croatia"],a:2},
+{cat:"Sports",d:2,q:"Pete Rose was banned from baseball in 1989 for what?",c:["Betting on games","Corking his bat","Using steroids"],a:0},
+{cat:"Sports",d:2,q:"Who took the heavyweight title from Buster Douglas in October 1990?",c:["Riddick Bowe","Evander Holyfield","Lennox Lewis"],a:1},
+{cat:"Sports",d:2,q:"Which tennis star won the \"Golden Slam\" - all four majors plus Olympic gold - in 1988?",c:["Martina Navratilova","Gabriela Sabatini","Steffi Graf"],a:2},
+{cat:"Sports",d:2,q:"How old was Jack Nicklaus when he won the 1986 Masters?",c:["40","43","46"],a:2},
+{cat:"Sports",d:2,q:"Cal Ripken Jr. broke Lou Gehrig's consecutive-games record in which year?",c:["1995","1993","1991"],a:0},
+{cat:"Sports",d:2,q:"Which team won the 1989 World Series that was interrupted by an earthquake?",c:["San Francisco Giants","Oakland Athletics","Los Angeles Dodgers"],a:1},
+{cat:"Sports",d:2,q:"Who won Wimbledon in 1985 as an unseeded 17-year-old?",c:["Boris Becker","Stefan Edberg","Pat Cash"],a:0},
+{cat:"Sports",d:2,q:"What was the nickname of Bears lineman William Perry?",c:["The Bus","The Tank","The Refrigerator"],a:2},
+{cat:"Sports",d:2,q:"Which Formula 1 champion died in a crash at Imola in May 1994?",c:["Alain Prost","Ayrton Senna","Nigel Mansell"],a:1},
+{cat:"Sports",d:3,q:"Whose grounder rolled through Bill Buckner's legs in Game 6 of the 1986 World Series?",c:["Gary Carter","Keith Hernandez","Mookie Wilson"],a:2},
+{cat:"Sports",d:3,q:"Kirk Gibson's 1988 World Series homer came off which star closer?",c:["Lee Smith","Dennis Eckersley","Goose Gossage"],a:1},
+{cat:"Sports",d:3,q:"Which quarterback led \"The Drive\" against Cleveland in the January 1987 AFC title game?",c:["John Elway","Dan Marino","Jim Kelly"],a:0},
+{cat:"Sports",d:3,q:"Which team won Super Bowl XXV when Scott Norwood's kick sailed wide right?",c:["Washington Redskins","San Francisco 49ers","New York Giants"],a:2},
+{cat:"Sports",d:3,q:"Who coached the Bulls to their first NBA title in 1991?",c:["Phil Jackson","Doug Collins","Pat Riley"],a:0},
+{cat:"Sports",d:3,q:"The Bulls beat which team in the 1992 NBA Finals?",c:["Utah Jazz","Portland Trail Blazers","Phoenix Suns"],a:1},
+{cat:"Sports",d:3,q:"The Bulls defeated which team in the 1991 NBA Finals?",c:["Detroit Pistons","Boston Celtics","Los Angeles Lakers"],a:2},
+{cat:"Sports",d:3,q:"Argentina beat which nation in the 1986 World Cup final?",c:["Brazil","West Germany","Italy"],a:1},
+{cat:"Sports",d:3,q:"Which Italian star missed the decisive penalty in the 1994 World Cup final?",c:["Roberto Baggio","Franco Baresi","Paolo Maldini"],a:0},
+{cat:"Sports",d:3,q:"Andres Escobar's fateful own goal at the 1994 World Cup came while playing for which country?",c:["Colombia","Mexico","Bolivia"],a:0},
+{cat:"Sports",d:3,q:"Which country hosted the 1990 World Cup?",c:["Spain","Mexico","Italy"],a:2},
+{cat:"Sports",d:3,q:"Which 38-year-old Cameroon striker became the star of the 1990 World Cup?",c:["George Weah","Roger Milla","Abedi Pele"],a:1},
+{cat:"Sports",d:3,q:"Which medal did Nancy Kerrigan win at the 1994 Winter Olympics?",c:["Silver","Gold","Bronze"],a:0},
+{cat:"Sports",d:3,q:"Who won women's figure skating gold at the 1994 Lillehammer Games?",c:["Katarina Witt","Kristi Yamaguchi","Oksana Baiul"],a:2},
+{cat:"Sports",d:3,q:"In which city did Buster Douglas knock out Mike Tyson in 1990?",c:["Las Vegas","Tokyo","Atlantic City"],a:1},
+{cat:"Sports",d:3,q:"Joe Montana finished his career in 1994 with which team?",c:["Seattle Seahawks","Kansas City Chiefs","Denver Broncos"],a:1},
+{cat:"Sports",d:3,q:"Michael Jordan set a playoff record with 63 points in 1986 against which team?",c:["Boston Celtics","Detroit Pistons","Milwaukee Bucks"],a:0},
+{cat:"Sports",d:3,q:"Jordan's famous 1989 buzzer-beater \"The Shot\" eliminated which team?",c:["New York Knicks","Atlanta Hawks","Cleveland Cavaliers"],a:2},
+{cat:"Sports",d:3,q:"Which \"Bad Boys\" team won back-to-back NBA titles in 1989 and 1990?",c:["Philadelphia 76ers","Detroit Pistons","Houston Rockets"],a:1},
+{cat:"Sports",d:3,q:"Who won the women's 100m at the 1988 Seoul Olympics in dazzling style?",c:["Florence Griffith Joyner","Jackie Joyner-Kersee","Evelyn Ashford"],a:0},
+{cat:"Sports",d:3,q:"Monica Seles was stabbed in 1993 by an obsessed fan of which rival?",c:["Gabriela Sabatini","Arantxa Sanchez Vicario","Steffi Graf"],a:2},
+{cat:"Sports",d:4,q:"Who became the first Black quarterback to win a Super Bowl, in January 1988?",c:["Doug Williams","Warren Moon","Randall Cunningham"],a:0},
+{cat:"Sports",d:4,q:"The 49ers' last-minute drive in Super Bowl XXIII beat which team?",c:["Miami Dolphins","Cincinnati Bengals","Denver Broncos"],a:1},
+{cat:"Sports",d:4,q:"Who was named MVP of Super Bowl XXIII in January 1989?",c:["Joe Montana","Roger Craig","Jerry Rice"],a:2},
+{cat:"Sports",d:4,q:"Hakeem Olajuwon's Rockets beat which team in the 1994 NBA Finals?",c:["Indiana Pacers","Utah Jazz","New York Knicks"],a:2},
+{cat:"Sports",d:4,q:"The Rockets swept which team to repeat as champions in the 1995 NBA Finals?",c:["San Antonio Spurs","Orlando Magic","Phoenix Suns"],a:1},
+{cat:"Sports",d:4,q:"Which Bull hit the title-clinching 3-pointer in Game 6 of the 1993 Finals?",c:["John Paxson","B.J. Armstrong","Steve Kerr"],a:0},
+{cat:"Sports",d:4,q:"Who hit the famous buzzer-beater for Duke against Kentucky in the 1992 NCAA tournament?",c:["Bobby Hurley","Christian Laettner","Grant Hill"],a:1},
+{cat:"Sports",d:4,q:"Which school upset Georgetown in the 1985 NCAA championship game?",c:["St. John's","Memphis State","Villanova"],a:2},
+{cat:"Sports",d:4,q:"Who won the 1992 Masters?",c:["Fred Couples","Ray Floyd","Corey Pavin"],a:0},
+{cat:"Sports",d:4,q:"Which golfer won back-to-back Masters titles in 1989 and 1990?",c:["Greg Norman","Nick Faldo","Seve Ballesteros"],a:1},
+{cat:"Sports",d:4,q:"Which unknown ninth alternate won the 1991 PGA Championship?",c:["John Daly","Payne Stewart","Paul Azinger"],a:0},
+{cat:"Sports",d:4,q:"Which 39-year-old thrilled crowds with a run to the 1991 US Open semifinals?",c:["John McEnroe","Ivan Lendl","Jimmy Connors"],a:2},
+{cat:"Sports",d:4,q:"Who won the 1989 French Open at 17, the youngest male Grand Slam champion?",c:["Pete Sampras","Jim Courier","Michael Chang"],a:2},
+{cat:"Sports",d:4,q:"Whose NHL career scoring record did Wayne Gretzky break in October 1989?",c:["Gordie Howe","Phil Esposito","Bobby Orr"],a:0},
+{cat:"Sports",d:4,q:"Which team won back-to-back Stanley Cups in 1991 and 1992?",c:["Edmonton Oilers","Pittsburgh Penguins","Calgary Flames"],a:1},
+{cat:"Sports",d:4,q:"Which team ended a 54-year Stanley Cup drought by winning in 1994?",c:["New York Rangers","Boston Bruins","Chicago Blackhawks"],a:0},
+{cat:"Sports",d:4,q:"Which goalie won the Conn Smythe Trophy in Montreal's 1993 Stanley Cup run?",c:["Grant Fuhr","Ed Belfour","Patrick Roy"],a:2},
+{cat:"Sports",d:4,q:"Bo Jackson played NFL football for which team while also starring in baseball?",c:["Seattle Seahawks","Los Angeles Raiders","Denver Broncos"],a:1},
+{cat:"Sports",d:4,q:"Who was awarded the 1988 Olympic 100m gold after Ben Johnson's disqualification?",c:["Linford Christie","Calvin Smith","Carl Lewis"],a:2},
+{cat:"Sports",d:4,q:"Who hit the walk-off home run that won the 1993 World Series for Toronto?",c:["Joe Carter","Roberto Alomar","Paul Molitor"],a:0},
+{cat:"Sports",d:4,q:"Which team became the first based outside the US to win the World Series, in 1992?",c:["Montreal Expos","Toronto Blue Jays","Seattle Mariners"],a:1},
+{cat:"Sports",d:5,q:"How many points did Jordan score in his 1995 \"double nickel\" game at Madison Square Garden?",c:["45","55","63"],a:1},
+{cat:"Sports",d:5,q:"What jersey number did Michael Jordan wear when he returned to the NBA in March 1995?",c:["23","12","45"],a:2},
+{cat:"Sports",d:5,q:"Which enforcer was traded alongside Wayne Gretzky to Los Angeles in 1988?",c:["Marty McSorley","Dave Semenko","Esa Tikkanen"],a:0},
+{cat:"Sports",d:5,q:"In which round did Buster Douglas knock out Mike Tyson in 1990?",c:["8th","10th","12th"],a:1},
+{cat:"Sports",d:5,q:"Which unbeaten champion did Tyson knock out in just 91 seconds in June 1988?",c:["Larry Holmes","Tony Tucker","Michael Spinks"],a:2},
+{cat:"Sports",d:5,q:"How long was Scott Norwood's missed field goal at the end of Super Bowl XXV?",c:["47 yards","42 yards","52 yards"],a:0},
+{cat:"Sports",d:5,q:"Who scored the late penalty that won the 1990 World Cup final for West Germany?",c:["Lothar Matthaus","Jurgen Klinsmann","Andreas Brehme"],a:2},
+{cat:"Sports",d:5,q:"Which Italian striker won the Golden Boot at the 1990 World Cup?",c:["Gianluca Vialli","Salvatore Schillaci","Roberto Mancini"],a:1},
+{cat:"Sports",d:5,q:"Who scored five goals in a single match at the 1994 World Cup?",c:["Oleg Salenko","Hristo Stoichkov","Romario"],a:0},
+{cat:"Sports",d:5,q:"Who was head coach of the 1992 US Olympic Dream Team?",c:["Lenny Wilkens","Don Nelson","Chuck Daly"],a:2},
+{cat:"Sports",d:5,q:"Who was the lone college player selected to the 1992 Dream Team?",c:["Christian Laettner","Shaquille O'Neal","Alonzo Mourning"],a:0},
+{cat:"Sports",d:5,q:"Which Dodger threw a record 59 straight scoreless innings in 1988?",c:["Fernando Valenzuela","Orel Hershiser","Tim Belcher"],a:1},
+{cat:"Sports",d:5,q:"Nolan Ryan threw his record seventh no-hitter in 1991 with which team?",c:["Texas Rangers","Houston Astros","California Angels"],a:0},
+{cat:"Sports",d:5,q:"Whose career stolen base record did Rickey Henderson break in 1991?",c:["Ty Cobb","Maury Wills","Lou Brock"],a:2},
+{cat:"Sports",d:5,q:"Which slugger hit 51 home runs for the Tigers in 1990?",c:["Mark McGwire","Cecil Fielder","Jose Canseco"],a:1},
+{cat:"Sports",d:5,q:"Who became baseball's first 40-homer, 40-steal player in 1988?",c:["Jose Canseco","Barry Bonds","Darryl Strawberry"],a:0},
+{cat:"Sports",d:5,q:"In which month did the 1994 MLB players' strike begin?",c:["June","August","October"],a:1},
+{cat:"Sports",d:5,q:"Who actually swung the baton that struck Nancy Kerrigan's knee in January 1994?",c:["Jeff Gillooly","Shawn Eckardt","Shane Stant"],a:2},
+{cat:"Sports",d:5,q:"Speedskater Dan Jansen finally won Olympic gold in 1994 in which event?",c:["1,000 meters","500 meters","1,500 meters"],a:0},
+{cat:"Sports",d:5,q:"Which skier won both slalom and giant slalom gold at the Calgary 1988 Olympics?",c:["Marc Girardelli","Pirmin Zurbriggen","Alberto Tomba"],a:2},
+{cat:"Sports",d:5,q:"What was the final score of the Bears' Super Bowl XX rout of New England?",c:["38-9","46-10","55-10"],a:1}
+);
+
+window.RETRO_BANK = window.RETRO_BANK || [];
+window.RETRO_BANK.push(
+{cat:"World Events",d:1,q:"In what year did the Berlin Wall fall?",c:["1987","1989","1991"],a:1},
+{cat:"World Events",d:1,q:"The 1986 Chernobyl nuclear disaster occurred in which country?",c:["The Soviet Union","France","Sweden"],a:0},
+{cat:"World Events",d:1,q:"Which US space shuttle broke apart shortly after launch in January 1986?",c:["Columbia","Discovery","Challenger"],a:2},
+{cat:"World Events",d:1,q:"In 1990, Nelson Mandela was freed after 27 years in prison in which country?",c:["Zimbabwe","South Africa","Kenya"],a:1},
+{cat:"World Events",d:1,q:"Who won the 1992 US presidential election?",c:["George H.W. Bush","Bob Dole","Bill Clinton"],a:2},
+{cat:"World Events",d:1,q:"In what year was the Soviet Union officially dissolved?",c:["1991","1989","1993"],a:0},
+{cat:"World Events",d:1,q:"The 1991 Gulf War was fought to liberate which country from Iraqi occupation?",c:["Kuwait","Saudi Arabia","Iran"],a:0},
+{cat:"World Events",d:1,q:"Which Soviet leader introduced the reforms known as glasnost and perestroika?",c:["Boris Yeltsin","Leonid Brezhnev","Mikhail Gorbachev"],a:2},
+{cat:"World Events",d:1,q:"The 1989 Tiananmen Square protests took place in which city?",c:["Shanghai","Beijing","Hong Kong"],a:1},
+{cat:"World Events",d:1,q:"Margaret Thatcher, the 'Iron Lady,' was prime minister of which country?",c:["Australia","Canada","The United Kingdom"],a:2},
+{cat:"World Events",d:1,q:"Which country led the international military coalition in the 1991 Gulf War?",c:["The United States","France","Turkey"],a:0},
+{cat:"World Events",d:1,q:"East and West Germany officially reunified in what year?",c:["1989","1990","1992"],a:1},
+{cat:"World Events",d:1,q:"In what year was Nelson Mandela elected president of South Africa?",c:["1990","1994","1996"],a:1},
+{cat:"World Events",d:1,q:"What verdict did the jury reach in the 1995 O.J. Simpson murder trial?",c:["Guilty","Hung jury","Not guilty"],a:2},
+{cat:"World Events",d:1,q:"Which space agency launched the Hubble Space Telescope in 1990?",c:["NASA","The European Space Agency","The Soviet space program"],a:0},
+{cat:"World Events",d:1,q:"Hurricane Andrew devastated parts of which US state in 1992?",c:["Texas","North Carolina","Florida"],a:2},
+{cat:"World Events",d:1,q:"Who was the leader of Iraq during the 1991 Gulf War?",c:["Hosni Mubarak","Saddam Hussein","Muammar Gaddafi"],a:1},
+{cat:"World Events",d:1,q:"In his 1987 Berlin speech, Ronald Reagan said 'Mr. Gorbachev, tear down this' what?",c:["Wall","Curtain","Border"],a:0},
+{cat:"World Events",d:1,q:"In 1985, explorers located the deep-sea wreck of which famous ocean liner?",c:["The Titanic","The Lusitania","The Andrea Doria"],a:0},
+{cat:"World Events",d:1,q:"NAFTA linked the United States, Canada, and which third country?",c:["Brazil","Mexico","Chile"],a:1},
+{cat:"World Events",d:1,q:"Christa McAuliffe, killed in the 1986 shuttle disaster, was set to be the first American what in space?",c:["Journalist","Politician","Teacher"],a:2},
+{cat:"World Events",d:2,q:"The Exxon Valdez spilled millions of gallons of oil off which US state in 1989?",c:["Alaska","California","Louisiana"],a:0},
+{cat:"World Events",d:2,q:"Which party, led by Nelson Mandela, won South Africa's first all-race election in 1994?",c:["The Inkatha Freedom Party","The National Party","The African National Congress"],a:2},
+{cat:"World Events",d:2,q:"Pan Am Flight 103 was bombed over Lockerbie in 1988 - Lockerbie is in which country?",c:["Ireland","Scotland","England"],a:1},
+{cat:"World Events",d:2,q:"Who succeeded Margaret Thatcher as British prime minister in 1990?",c:["John Major","Neil Kinnock","Michael Heseltine"],a:0},
+{cat:"World Events",d:2,q:"What was the name of the 1991 US-led military operation that drove Iraq out of Kuwait?",c:["Operation Desert Shield","Operation Desert Storm","Operation Just Cause"],a:1},
+{cat:"World Events",d:2,q:"Who was Bill Clinton's running mate in the 1992 presidential election?",c:["Lloyd Bentsen","Joe Lieberman","Al Gore"],a:2},
+{cat:"World Events",d:2,q:"Which Romanian dictator was executed alongside his wife on Christmas Day 1989?",c:["Todor Zhivkov","Wojciech Jaruzelski","Nicolae Ceausescu"],a:2},
+{cat:"World Events",d:2,q:"Which US general commanded the coalition forces during the 1991 Gulf War?",c:["Norman Schwarzkopf","Wesley Clark","William Westmoreland"],a:0},
+{cat:"World Events",d:2,q:"In 1993, terrorists detonated a truck bomb in the parking garage of which New York landmark?",c:["The Empire State Building","The World Trade Center","The United Nations headquarters"],a:1},
+{cat:"World Events",d:2,q:"The 1993 federal siege near Waco, Texas involved which religious group?",c:["The Peoples Temple","The Branch Davidians","Heaven's Gate"],a:1},
+{cat:"World Events",d:2,q:"The 1994 genocide in Rwanda primarily targeted which ethnic group?",c:["The Tutsi","The Hutu","The Zulu"],a:0},
+{cat:"World Events",d:2,q:"Which Texas billionaire ran as an independent in the 1992 US presidential race?",c:["Steve Forbes","Lee Iacocca","Ross Perot"],a:2},
+{cat:"World Events",d:2,q:"The 1989 Tiananmen Square demonstrations were led mainly by which group?",c:["University students","Coal miners","Buddhist monks"],a:0},
+{cat:"World Events",d:2,q:"The Iran-Contra affair involved secret US arms sales to which country?",c:["Iraq","Iran","Libya"],a:1},
+{cat:"World Events",d:2,q:"Who served as vice president under George H.W. Bush?",c:["James Baker","Dick Cheney","Dan Quayle"],a:2},
+{cat:"World Events",d:2,q:"In what year did Iraq invade Kuwait, triggering the Gulf crisis?",c:["1989","1990","1991"],a:1},
+{cat:"World Events",d:2,q:"The 1985 Live Aid concerts raised money for famine relief in which country?",c:["Sudan","Somalia","Ethiopia"],a:2},
+{cat:"World Events",d:2,q:"The failed August 1991 hardline coup in Moscow tried to remove which leader from power?",c:["Mikhail Gorbachev","Boris Yeltsin","Eduard Shevardnadze"],a:0},
+{cat:"World Events",d:2,q:"Riots erupted in Los Angeles in 1992 after police officers were acquitted of beating whom?",c:["Reginald Denny","Marion Barry","Rodney King"],a:2},
+{cat:"World Events",d:2,q:"The Channel Tunnel, opened in 1994, links Britain with which country?",c:["France","Belgium","The Netherlands"],a:0},
+{cat:"World Events",d:2,q:"Who was arrested for the truck bombing of an Oklahoma City federal building in April 1995?",c:["Ted Kaczynski","Timothy McVeigh","Ramzi Yousef"],a:1},
+{cat:"World Events",d:3,q:"The peaceful 1989 'Velvet Revolution' ended communist rule in which country?",c:["Hungary","Poland","Czechoslovakia"],a:2},
+{cat:"World Events",d:3,q:"Vaclav Havel, elected president in December 1989, was famous earlier as what?",c:["A playwright","An economist","A rock musician"],a:0},
+{cat:"World Events",d:3,q:"Lech Walesa rose to fame as leader of which Polish trade union movement?",c:["Civic Forum","Solidarity","Charter 77"],a:1},
+{cat:"World Events",d:3,q:"Sarajevo, placed under siege in 1992, is the capital of which former Yugoslav republic?",c:["Croatia","Serbia","Bosnia and Herzegovina"],a:2},
+{cat:"World Events",d:3,q:"At the 1993 Oslo Accords signing, Israel's Yitzhak Rabin shook hands with which PLO leader?",c:["Yasser Arafat","George Habash","Mahmoud Abbas"],a:0},
+{cat:"World Events",d:3,q:"Which Israeli prime minister was assassinated in November 1995?",c:["Shimon Peres","Yitzhak Rabin","Menachem Begin"],a:1},
+{cat:"World Events",d:3,q:"Whom did George H.W. Bush defeat in the 1988 US presidential election?",c:["Michael Dukakis","Walter Mondale","Gary Hart"],a:0},
+{cat:"World Events",d:3,q:"In what year did Mikhail Gorbachev become leader of the Soviet Union?",c:["1982","1987","1985"],a:2},
+{cat:"World Events",d:3,q:"The 'Black Monday' global stock market crash happened in which year?",c:["1985","1987","1989"],a:1},
+{cat:"World Events",d:3,q:"Which was the first Soviet republic to declare independence, in March 1990?",c:["Lithuania","Estonia","Ukraine"],a:0},
+{cat:"World Events",d:3,q:"The 1992 Maastricht Treaty established which organization?",c:["The United Nations","The European Union","NATO"],a:1},
+{cat:"World Events",d:3,q:"Which South African president ordered Nelson Mandela's release in 1990?",c:["P.W. Botha","Pik Botha","F.W. de Klerk"],a:2},
+{cat:"World Events",d:3,q:"Which longtime East German leader was forced to resign in October 1989?",c:["Egon Krenz","Erich Honecker","Walter Ulbricht"],a:1},
+{cat:"World Events",d:3,q:"Who became Russia's first popularly elected president in 1991?",c:["Boris Yeltsin","Yegor Gaidar","Ruslan Khasbulatov"],a:0},
+{cat:"World Events",d:3,q:"The 1986 'People Power' revolution toppled Ferdinand Marcos in which country?",c:["Indonesia","Thailand","The Philippines"],a:2},
+{cat:"World Events",d:3,q:"In 1988, Benazir Bhutto became prime minister of which country?",c:["India","Bangladesh","Pakistan"],a:2},
+{cat:"World Events",d:3,q:"The 1993 'Velvet Divorce' split Czechoslovakia into the Czech Republic and what?",c:["Moravia","Slovakia","Slovenia"],a:1},
+{cat:"World Events",d:3,q:"Kim Il-sung, who died in 1994, had ruled which country since its founding?",c:["North Korea","China","Vietnam"],a:0},
+{cat:"World Events",d:3,q:"In 1989, the Soviet Union completed its troop withdrawal from which country?",c:["Afghanistan","Hungary","Mongolia"],a:0},
+{cat:"World Events",d:3,q:"The 1992 Earth Summit on the environment was held in which city?",c:["Stockholm","Kyoto","Rio de Janeiro"],a:2},
+{cat:"World Events",d:3,q:"During the 1991 Gulf War, Iraq fired Scud missiles at Saudi Arabia and which other country?",c:["Turkey","Israel","Egypt"],a:1},
+{cat:"World Events",d:4,q:"French agents sank the Greenpeace ship Rainbow Warrior in 1985 in which country's harbor?",c:["Australia","New Zealand","Fiji"],a:1},
+{cat:"World Events",d:4,q:"The 1985 Plaza Accord was an international agreement to weaken which currency?",c:["The Japanese yen","The British pound","The US dollar"],a:2},
+{cat:"World Events",d:4,q:"Gorbachev came to power after the death of which short-lived Soviet leader?",c:["Konstantin Chernenko","Yuri Andropov","Leonid Brezhnev"],a:0},
+{cat:"World Events",d:4,q:"The 1986 Reagan-Gorbachev summit that nearly abolished nuclear arsenals was held in which city?",c:["Geneva","Reykjavik","Helsinki"],a:1},
+{cat:"World Events",d:4,q:"The 1987 INF Treaty between the US and USSR eliminated which class of weapons?",c:["Intermediate-range nuclear missiles","Chemical weapons","Submarine-launched missiles"],a:0},
+{cat:"World Events",d:4,q:"A UN-brokered ceasefire in 1988 ended eight years of war between Iraq and which neighbor?",c:["Syria","Kuwait","Iran"],a:2},
+{cat:"World Events",d:4,q:"Olof Palme, assassinated on a Stockholm street in 1986, was prime minister of which country?",c:["Norway","Sweden","Denmark"],a:1},
+{cat:"World Events",d:4,q:"The 1994 US Operation Uphold Democracy restored Jean-Bertrand Aristide to power in which country?",c:["Haiti","Panama","The Dominican Republic"],a:0},
+{cat:"World Events",d:4,q:"The 1993 'Black Hawk Down' battle that killed 18 US soldiers took place in which city?",c:["Kigali","Beirut","Mogadishu"],a:2},
+{cat:"World Events",d:4,q:"In 1990, Mary Robinson became the first woman elected president of which country?",c:["Ireland","Iceland","Finland"],a:0},
+{cat:"World Events",d:4,q:"Rajiv Gandhi, assassinated at a 1991 campaign stop, had been prime minister of which country?",c:["Sri Lanka","India","Bangladesh"],a:1},
+{cat:"World Events",d:4,q:"Bush and Gorbachev declared the Cold War ending at a December 1989 shipboard summit off which island?",c:["Cyprus","Sicily","Malta"],a:2},
+{cat:"World Events",d:4,q:"In what year was the Warsaw Pact formally dissolved?",c:["1991","1989","1993"],a:0},
+{cat:"World Events",d:4,q:"The 1995 Dayton Accords, negotiated in Ohio, ended the war in which country?",c:["Croatia","Bosnia","Macedonia"],a:1},
+{cat:"World Events",d:4,q:"Which cult released sarin nerve gas on the Tokyo subway in March 1995?",c:["The Solar Temple","The Unification Church","Aum Shinrikyo"],a:2},
+{cat:"World Events",d:4,q:"Violent 1990 riots against Margaret Thatcher's poll tax broke out in which city?",c:["Manchester","Glasgow","London"],a:2},
+{cat:"World Events",d:4,q:"Boutros Boutros-Ghali, who became UN Secretary-General in 1992, came from which country?",c:["Egypt","Ghana","Lebanon"],a:0},
+{cat:"World Events",d:4,q:"George H.W. Bush's famous 1988 pledge 'Read my lips' promised no new what?",c:["Wars","Taxes","Deficits"],a:1},
+{cat:"World Events",d:4,q:"Which former UN Secretary-General was elected president of Austria in 1986 despite a wartime scandal?",c:["Bruno Kreisky","Franz Vranitzky","Kurt Waldheim"],a:2},
+{cat:"World Events",d:4,q:"The Zapatista uprising launched on January 1, 1994 in which Mexican state?",c:["Chiapas","Oaxaca","Sonora"],a:0},
+{cat:"World Events",d:4,q:"Ayatollah Khomeini's 1989 fatwa called for the death of which British author?",c:["V.S. Naipaul","Salman Rushdie","Hanif Kureishi"],a:1},
+{cat:"World Events",d:5,q:"From which prison did Nelson Mandela walk free in February 1990?",c:["Victor Verster","Robben Island","Pollsmoor"],a:0},
+{cat:"World Events",d:5,q:"The August 1991 Soviet coup plotters called themselves the State Committee on what?",c:["National Salvation","The State of Emergency","Constitutional Order"],a:1},
+{cat:"World Events",d:5,q:"The December 1991 Belavezha Accords dissolving the USSR were signed by Russia, Ukraine, and which country?",c:["Kazakhstan","Georgia","Belarus"],a:2},
+{cat:"World Events",d:5,q:"Who briefly led East Germany after Erich Honecker's ouster in October 1989?",c:["Egon Krenz","Hans Modrow","Lothar de Maiziere"],a:0},
+{cat:"World Events",d:5,q:"The April 1994 plane crash that sparked the Rwandan genocide also killed the president of which country?",c:["Uganda","Zaire","Burundi"],a:2},
+{cat:"World Events",d:5,q:"Italy's 'Clean Hands' corruption investigation, launched in 1992, began in which city?",c:["Rome","Milan","Palermo"],a:1},
+{cat:"World Events",d:5,q:"Who led the two 1987 military coups in Fiji?",c:["Sitiveni Rabuka","Kamisese Mara","Timoci Bavadra"],a:0},
+{cat:"World Events",d:5,q:"Which Iraqi foreign minister met James Baker in Geneva days before the 1991 Gulf War began?",c:["Izzat Ibrahim al-Douri","Tariq Aziz","Ali Hassan al-Majid"],a:1},
+{cat:"World Events",d:5,q:"Which reactor number exploded at the Chernobyl plant in April 1986?",c:["Reactor 1","Reactor 2","Reactor 4"],a:2},
+{cat:"World Events",d:5,q:"On what date in December 1991 did Gorbachev resign as Soviet president?",c:["December 8","December 25","December 31"],a:1},
+{cat:"World Events",d:5,q:"Which Chinese premier announced martial law in Beijing in May 1989?",c:["Li Peng","Zhao Ziyang","Deng Xiaoping"],a:0},
+{cat:"World Events",d:5,q:"Which Chinese Communist Party chief was ousted in 1989 for sympathizing with the Tiananmen protesters?",c:["Hu Yaobang","Jiang Zemin","Zhao Ziyang"],a:2},
+{cat:"World Events",d:5,q:"Profits from the Iran-Contra arms sales were secretly diverted to rebels fighting in which country?",c:["El Salvador","Nicaragua","Guatemala"],a:1},
+{cat:"World Events",d:5,q:"The 1985 Schengen Agreement on open borders was signed in a village in which country?",c:["Belgium","France","Luxembourg"],a:2},
+{cat:"World Events",d:5,q:"In October 1993, Boris Yeltsin ordered tanks to shell which Moscow building?",c:["The parliament's White House","The Lubyanka","Ostankino Tower"],a:0},
+{cat:"World Events",d:5,q:"Namibia gained independence in 1990 after decades of rule by which country?",c:["Portugal","Britain","South Africa"],a:2},
+{cat:"World Events",d:5,q:"When North and South Yemen unified in 1990, which city became the capital?",c:["Sanaa","Aden","Taiz"],a:0},
+{cat:"World Events",d:5,q:"The 1989 Romanian revolution began with protests in which western city?",c:["Bucharest","Timisoara","Cluj"],a:1},
+{cat:"World Events",d:5,q:"Israel's 1991 Operation Solomon airlifted thousands of Jews out of which country?",c:["Ethiopia","Yemen","Syria"],a:0},
+{cat:"World Events",d:5,q:"A devastating December 1988 earthquake killed tens of thousands in which Soviet republic?",c:["Georgia","Uzbekistan","Armenia"],a:2},
+{cat:"World Events",d:5,q:"Who was elected president of Poland in December 1990?",c:["Tadeusz Mazowiecki","Lech Walesa","Wojciech Jaruzelski"],a:1}
+);
+
+window.RETRO_BANK = window.RETRO_BANK || [];
+window.RETRO_BANK.push(
+{cat:"Food & Drink",d:1,q:"In 1985, Coca-Cola replaced its original formula with a sweeter cola sold under what name?",c:["New Coke","Coca-Cola Classic","Coca-Cola Gold"],a:0},
+{cat:"Food & Drink",d:1,q:"What was visually unusual about Crystal Pepsi, Pepsi's big 1992 launch?",c:["It glowed under black light","It was completely clear","It was bright blue"],a:1},
+{cat:"Food & Drink",d:1,q:"Which pizza chain introduced Stuffed Crust Pizza in 1995, urging fans to eat the crust first?",c:["Domino's","Little Caesars","Pizza Hut"],a:2},
+{cat:"Food & Drink",d:1,q:"'Avoid the Noid' warned late-80s ads for which pizza chain, home of the claymation villain?",c:["Pizza Hut","Papa John's","Domino's"],a:2},
+{cat:"Food & Drink",d:1,q:"Which chain hyped its two-for-one deal with the famous cry 'Pizza! Pizza!'?",c:["Little Caesars","Godfather's Pizza","Domino's"],a:0},
+{cat:"Food & Drink",d:1,q:"In TV ads starting in 1990, Bart Simpson warned: 'Nobody better lay a finger on my' what?",c:["Baby Ruth","Butterfinger","Kit Kat"],a:1},
+{cat:"Food & Drink",d:1,q:"Sunglasses-wearing cartoon mascot Chester Cheetah has pitched which snack since the late 1980s?",c:["Doritos","Cheetos","Fritos"],a:1},
+{cat:"Food & Drink",d:1,q:"Dunkaroos, the beloved 90s lunchbox snack, had kids dunk little cookies into what?",c:["Peanut butter","Chocolate syrup","Frosting"],a:2},
+{cat:"Food & Drink",d:1,q:"Fruit Gushers, the hit early-90s fruit snack, surprised chewers with what?",c:["A squirt of fruity juice inside","Popping candy inside","A sour powder core"],a:0},
+{cat:"Food & Drink",d:1,q:"Bagel Bites, the microwavable snack of the late 80s and 90s, put pizza toppings on what?",c:["Mini bagels","English muffins","Saltine crackers"],a:0},
+{cat:"Food & Drink",d:1,q:"Which drink brand of the early 90s boasted it was 'Made from the best stuff on Earth'?",c:["Arizona","Snapple","Fruitopia"],a:1},
+{cat:"Food & Drink",d:1,q:"Which chewy mint candy's gloriously cheesy 90s jingle dubbed it 'The Freshmaker'?",c:["Certs","Tic Tac","Mentos"],a:2},
+{cat:"Food & Drink",d:1,q:"'Gotta have my Pops!' begged kids in late-80s and 90s ads for which cereal?",c:["Froot Loops","Frosted Flakes","Corn Pops"],a:2},
+{cat:"Food & Drink",d:1,q:"The claymation California Raisins, who sang their way through 1986 TV ads, were created to sell what?",c:["Raisins","Grape juice","Bran flakes"],a:0},
+{cat:"Food & Drink",d:1,q:"Three swamp frogs croaking a beer's name syllable by syllable debuted in a 1995 Super Bowl ad for which brand?",c:["Coors","Budweiser","Miller"],a:1},
+{cat:"Food & Drink",d:1,q:"Hi-C's slime-green Ecto Cooler drink was a tie-in with which franchise?",c:["Beetlejuice","Ghostbusters","Teenage Mutant Ninja Turtles"],a:1},
+{cat:"Food & Drink",d:1,q:"Which burger giant spent the late 80s and early 90s trying to sell pizza, remembered today as 'McPizza'?",c:["Burger King","Wendy's","McDonald's"],a:2},
+{cat:"Food & Drink",d:1,q:"Zima, the heavily hyped malt beverage that went national in 1994, was notable for being what?",c:["Crystal clear","Bright blue","Glow-in-the-dark green"],a:0},
+{cat:"Food & Drink",d:1,q:"'Taste the Rainbow,' a slogan introduced in 1994, belongs to which candy?",c:["Skittles","Starburst","Life Savers"],a:0},
+{cat:"Food & Drink",d:1,q:"In 1995, fans voted to add which new M&M's color, retiring tan?",c:["Purple","Blue","Pink"],a:1},
+{cat:"Food & Drink",d:1,q:"'Make a Run for the Border' was the late-80s and early-90s slogan of which fast food chain?",c:["Del Taco","Chi-Chi's","Taco Bell"],a:2},
+{cat:"Food & Drink",d:2,q:"The McDonald's McDLT came in a two-sided foam box designed to do what until you were ready to eat?",c:["Steam the bun soft","Keep the pickles crunchy","Keep the hot side hot and the cool side cool"],a:2},
+{cat:"Food & Drink",d:2,q:"Which brand introduced Lunchables, the crackers-meat-cheese lunch trays, in 1988?",c:["Oscar Mayer","Hormel","Libby's"],a:0},
+{cat:"Food & Drink",d:2,q:"Spuds MacKenzie, the party-loving bull terrier of late-80s ads, pitched which beer?",c:["Miller Lite","Bud Light","Coors Light"],a:1},
+{cat:"Food & Drink",d:2,q:"In a famous 1992 Super Bowl ad, Cindy Crawford stunned two young boys by drinking a can of what?",c:["Diet Coke","Pepsi","7Up"],a:1},
+{cat:"Food & Drink",d:2,q:"Ray Charles sang 'You Got the Right One, Baby (Uh-Huh!)' in early-90s ads for which drink?",c:["Diet Coke","Dr Pepper","Diet Pepsi"],a:2},
+{cat:"Food & Drink",d:2,q:"The 1991 'Be Like Mike' ads starring Michael Jordan promoted which drink?",c:["Gatorade","Powerade","All Sport"],a:0},
+{cat:"Food & Drink",d:2,q:"The 'Got Milk?' campaign launched in 1993 on behalf of milk processors in which state?",c:["California","Wisconsin","Vermont"],a:0},
+{cat:"Food & Drink",d:2,q:"Ben & Jerry's Cherry Garcia, introduced in 1987, honors the lead guitarist of which band?",c:["The Beach Boys","The Grateful Dead","The Rolling Stones"],a:1},
+{cat:"Food & Drink",d:2,q:"SnackWell's cookies, Nabisco's early-90s shelf-clearing craze, sold out because they contained little or no what?",c:["Salt","Sugar","Fat"],a:2},
+{cat:"Food & Drink",d:2,q:"Which coffee chain introduced the blended Frappuccino in 1995?",c:["Dunkin' Donuts","Peet's Coffee","Starbucks"],a:2},
+{cat:"Food & Drink",d:2,q:"'It's not delivery. It's ___' insisted ads for a rising-crust frozen pizza launched in 1995.",c:["DiGiorno","Tombstone","Red Baron"],a:0},
+{cat:"Food & Drink",d:2,q:"Which fried chicken chain officially shortened its restaurant branding to just its initials in 1991?",c:["Church's Chicken","Kentucky Fried Chicken","Popeyes"],a:1},
+{cat:"Food & Drink",d:2,q:"In Home Alone (1990), Kevin treats himself to \"a lovely\" what, \"just for me\"?",c:["A pepperoni pizza","A cheese pizza","A tub of ice cream"],a:1},
+{cat:"Food & Drink",d:2,q:"Bubble Tape gum, the late-80s hit sold in a round pink dispenser, gave you how much gum?",c:["Three feet","Ten feet","Six feet"],a:2},
+{cat:"Food & Drink",d:2,q:"True to its name, how long is the rolled-up snack in Fruit by the Foot, launched in 1991?",c:["About three feet","Exactly one foot","About six feet"],a:0},
+{cat:"Food & Drink",d:2,q:"Snapple's 90s ads starred Wendy Kaufman, who was actually what?",c:["A real Snapple employee who answered fan letters","A soap opera actress","The founder's daughter"],a:0},
+{cat:"Food & Drink",d:2,q:"'Obey Your Thirst,' the hip-hop-flavored campaign launched in 1994, sold which soda?",c:["7Up","Sprite","Mello Yello"],a:1},
+{cat:"Food & Drink",d:2,q:"Computer-animated polar bears first gathered to watch the northern lights in 1993 ads for which brand?",c:["Pepsi","Klondike","Coca-Cola"],a:2},
+{cat:"Food & Drink",d:2,q:"Richard Simmons' Deal-A-Meal, hawked in countless infomercials, helped dieters using what?",c:["A spinning points wheel","Frozen portion trays","A wallet of cards traded in for each serving of food"],a:2},
+{cat:"Food & Drink",d:2,q:"'Do the Dew,' the extreme-sports soda campaign of the 90s, sold which drink?",c:["Mountain Dew","Mello Yello","Jolt Cola"],a:0},
+{cat:"Food & Drink",d:2,q:"Spot, the red dot who slid off his soda's logo and starred in the 1993 video game Cool Spot, repped which brand?",c:["Squirt","7Up","Fanta"],a:1},
+{cat:"Food & Drink",d:3,q:"After 79 days of New Coke backlash in 1985, the original formula returned to shelves under what name?",c:["Coke Gold","Coca-Cola Classic","Coca-Cola Original"],a:1},
+{cat:"Food & Drink",d:3,q:"Which flavored Coke went national in 1985, the same year as the New Coke fiasco?",c:["Vanilla Coke","Lemon Coke","Cherry Coke"],a:2},
+{cat:"Food & Drink",d:3,q:"Which 1985 soda proudly bragged it had 'all the sugar and twice the caffeine'?",c:["Jolt Cola","Mello Yello","Mountain Dew"],a:0},
+{cat:"Food & Drink",d:3,q:"Which brewer created Zima, the 'clearmalt' alternative to beer?",c:["Coors","Miller","Anheuser-Busch"],a:0},
+{cat:"Food & Drink",d:3,q:"Clearly Canadian, the trendy early-90s drink in the teardrop glass bottle, was what?",c:["A clear cola","Flavored sparkling water","A wine cooler"],a:1},
+{cat:"Food & Drink",d:3,q:"Frank and Ed, the porch-sitting old-timers who thanked you 'for your support,' pitched what in the late 80s?",c:["Michelob dry beer","Franzia boxed wine","Bartles & Jaymes wine coolers"],a:2},
+{cat:"Food & Drink",d:3,q:"Fruitopia, the psychedelic fruit drink launched in 1994, was created by which beverage giant?",c:["PepsiCo","Snapple","Coca-Cola"],a:2},
+{cat:"Food & Drink",d:3,q:"Pepsi yanked a 1989 ad campaign after which star's 'Like a Prayer' video sparked boycott threats?",c:["Madonna","George Michael","Paula Abdul"],a:0},
+{cat:"Food & Drink",d:3,q:"Which soda brand signed NBA rookie Shaquille O'Neal to a big endorsement deal in 1992?",c:["Coca-Cola","Pepsi","Sprite"],a:1},
+{cat:"Food & Drink",d:3,q:"Which baseball manager famously shilled Ultra Slim-Fast in ads around 1990?",c:["Sparky Anderson","Tommy Lasorda","Whitey Herzog"],a:1},
+{cat:"Food & Drink",d:3,q:"In late-80s Doritos ads, Jay Leno told America to 'Crunch all you want,' promising what?",c:["\"No one has to know\"","\"They're basically health food\"","\"We'll make more\""],a:2},
+{cat:"Food & Drink",d:3,q:"Which now-classic Doritos flavor first hit shelves in 1986?",c:["Cool Ranch","Taco Supreme","Sour Cream & Onion"],a:0},
+{cat:"Food & Drink",d:3,q:"Warheads, the imported candy craze that hit America in the early 90s, dared kids to endure what?",c:["Face-puckering sourness","Tongue-scorching heat","Mouth-freezing cold"],a:0},
+{cat:"Food & Drink",d:3,q:"Teddy Grahams, the bear-shaped snack that took off in 1988, were made by which company?",c:["Keebler","Nabisco","Pepperidge Farm"],a:1},
+{cat:"Food & Drink",d:3,q:"Around 1990, Chef Boyardee sold canned pasta shaped like which TV heroes?",c:["ALF","The California Raisins","The Teenage Mutant Ninja Turtles"],a:2},
+{cat:"Food & Drink",d:3,q:"Urkel-Os, the 1991 breakfast cereal, celebrated the breakout nerd from which sitcom?",c:["Full House","Saved by the Bell","Family Matters"],a:2},
+{cat:"Food & Drink",d:3,q:"French Toast Crunch, introduced by General Mills in 1995, featured cereal pieces shaped like what?",c:["Tiny slices of toast","Little syrup bottles","Breakfast waffles"],a:0},
+{cat:"Food & Drink",d:3,q:"Mac Tonight, the crooning crescent-moon-headed piano man of 1986 ads, sang for which chain?",c:["Denny's","McDonald's","Hardee's"],a:1},
+{cat:"Food & Drink",d:3,q:"In January 1990, McDonald's drew a line of thousands opening its first restaurant in which city?",c:["Beijing","Moscow","East Berlin"],a:1},
+{cat:"Food & Drink",d:3,q:"Which fast food chain launched its long-running Monopoly game promotion in 1987?",c:["Burger King","Wendy's","McDonald's"],a:2},
+{cat:"Food & Drink",d:3,q:"Dippin' Dots, invented in 1988, sold its flash-frozen beads under what tagline?",c:["\"Ice Cream of the Future\"","\"Ice Cream from Outer Space\"","\"The World's Coldest Ice Cream\""],a:0},
+{cat:"Food & Drink",d:4,q:"In 1992, Coca-Cola quietly rebranded the failed New Coke under what name?",c:["Coke II","Coke Prime","Coca-Cola Silver"],a:0},
+{cat:"Food & Drink",d:4,q:"Tab Clear, launched in 1992, was Coca-Cola's answer to which rival product?",c:["Clearly Canadian","Crystal Pepsi","Zima"],a:1},
+{cat:"Food & Drink",d:4,q:"Crystal Pepsi's 1993 Super Bowl ad was set to which Van Halen hit?",c:["\"Jump\"","\"Panama\"","\"Right Now\""],a:2},
+{cat:"Food & Drink",d:4,q:"Which stuttering computer-generated TV character told viewers to 'Catch the Wave' for Coke in 1986?",c:["Johnny Five","ALF","Max Headroom"],a:2},
+{cat:"Food & Drink",d:4,q:"Kenny Rogers Roasters, co-founded by the country star in 1991, specialized in what?",c:["Wood-fired rotisserie chicken","Texas-style brisket","Chicken-fried steak"],a:0},
+{cat:"Food & Drink",d:4,q:"In 1994, Quaker Oats bought which drink brand for a famously disastrous $1.7 billion?",c:["Arizona","Snapple","Nantucket Nectars"],a:1},
+{cat:"Food & Drink",d:4,q:"AriZona Iced Tea, with its Southwestern-styled cans, launched in 1992 from which city?",c:["Phoenix, Arizona","Brooklyn, New York","Santa Fe, New Mexico"],a:1},
+{cat:"Food & Drink",d:4,q:"The first \"Got Milk?\" ad in 1993 showed a history buff, mouth glued shut by peanut butter, unable to name the man who shot whom?",c:["Abraham Lincoln","Jesse James","Alexander Hamilton"],a:2},
+{cat:"Food & Drink",d:4,q:"Years before Seinfeld, which actor sang a splashy show tune for the McDLT in a 1985 McDonald's ad?",c:["Jason Alexander","Michael Richards","Jerry Seinfeld"],a:0},
+{cat:"Food & Drink",d:4,q:"McDonald's 1991 diet flop, the McLean Deluxe, stayed juicy thanks to carrageenan, an extract of what?",c:["Seaweed","Cactus","Soybeans"],a:0},
+{cat:"Food & Drink",d:4,q:"Burger King's 1985-86 'Herb' campaign had America hunting a nerd famous for never having done what?",c:["Tried french fries","Eaten a Whopper","Left his hometown"],a:1},
+{cat:"Food & Drink",d:4,q:"In 1993, after a massive negligence verdict, Domino's dropped which famous promise?",c:["Its money-back freshness pledge","Free delivery for life","Its 30-minutes-or-less delivery guarantee"],a:2},
+{cat:"Food & Drink",d:4,q:"In Wayne's World (1992), Wayne mocks sellouts while grinning over a slice from which chain?",c:["Little Caesars","Domino's","Pizza Hut"],a:2},
+{cat:"Food & Drink",d:4,q:"In Demolition Man (1993), which chain is the only restaurant to survive the 'franchise wars'?",c:["Taco Bell","McDonald's","Pizza Hut"],a:0},
+{cat:"Food & Drink",d:4,q:"Auntie Anne's, founded at a Pennsylvania farmers market stand in 1988, built its mall empire on what?",c:["Cinnamon rolls","Hand-rolled soft pretzels","Funnel cakes"],a:1},
+{cat:"Food & Drink",d:4,q:"Frozen yogurt giant TCBY originally used its initials to stand for what?",c:["\"The Country's Best Yogurt\"","\"This Can't Be Yogurt\"","\"That Creamy Blended Yogurt\""],a:1},
+{cat:"Food & Drink",d:4,q:"In 1990, which upscale water brand recalled bottles worldwide over benzene contamination?",c:["Evian","San Pellegrino","Perrier"],a:2},
+{cat:"Food & Drink",d:4,q:"A 1988 bestseller and cholesterol studies set off a late-80s grocery frenzy for which ingredient?",c:["Oat bran","Wheat germ","Barley"],a:0},
+{cat:"Food & Drink",d:4,q:"Which buzz-cut infomercial star screamed 'Stop the Insanity!' at 90s dieters?",c:["Susan Powter","Suzanne Somers","Jenny Craig"],a:0},
+{cat:"Food & Drink",d:4,q:"The little red swirl stamped on countless late-80s diet soda cans advertised which sweetener brand?",c:["Sweet'N Low","NutraSweet","Sugar Twin"],a:1},
+{cat:"Food & Drink",d:4,q:"Ralston's 1988 Nintendo Cereal System split every box between Super Mario Bros. and which other game?",c:["Metroid","Donkey Kong","The Legend of Zelda"],a:2},
+{cat:"Food & Drink",d:5,q:"Pepsi A.M., test-marketed in 1989 and quickly abandoned, was a cola aimed at which occasion?",c:["Late-night cramming","Long road trips","Breakfast"],a:2},
+{cat:"Food & Drink",d:5,q:"7Up Gold, the brand's rare 1988 flop, broke 7Up's own famous rule by containing what?",c:["Caffeine","Alcohol","Real gold flakes"],a:0},
+{cat:"Food & Drink",d:5,q:"Which of these was a real Fruitopia flavor sold in the mid-90s?",c:["Kiwi Karma Crush","Strawberry Passion Awareness","Peach Peace Summit"],a:1},
+{cat:"Food & Drink",d:5,q:"Josta, launched by PepsiCo in 1995, was an early energy soda made with which South American berry?",c:["Acai","Guarana","Yerba mate"],a:1},
+{cat:"Food & Drink",d:5,q:"Mazagran, a mid-90s bottled coffee soda that flopped, paired Pepsi with which partner?",c:["Maxwell House","Folgers","Starbucks"],a:2},
+{cat:"Food & Drink",d:5,q:"Red Dog beer, launched in 1994 from the folksy 'Plank Road Brewery,' was really made by which brewer?",c:["Miller","Stroh's","Pabst"],a:0},
+{cat:"Food & Drink",d:5,q:"O'Doul's, the non-alcoholic brew that hit shelves in 1990, comes from which brewer?",c:["Anheuser-Busch","Coors","Heineken"],a:0},
+{cat:"Food & Drink",d:5,q:"All Sport, the 1994 sports drink launched to battle Gatorade, was made by which company?",c:["Coca-Cola","PepsiCo","Quaker Oats"],a:1},
+{cat:"Food & Drink",d:5,q:"Which short-lived slogan replaced Pepsi's 'Choice of a New Generation' during 1992?",c:["\"Uh-Huh, Drink Up\"","\"Taste Above All\"","\"Gotta Have It\""],a:2},
+{cat:"Food & Drink",d:5,q:"Simple Pleasures frozen dessert (1990) showcased Simplesse, a fat substitute made from what?",c:["Seaweed extract","Modified corn starch","Blended egg and milk proteins"],a:2},
+{cat:"Food & Drink",d:5,q:"Sales of Ayds, a decades-old appetite-suppressant candy, collapsed in the late 80s. Why?",c:["Its name sounded like the AIDS epidemic","The FDA banned its key ingredient","A tampering scare emptied shelves"],a:0},
+{cat:"Food & Drink",d:5,q:"Bar None, the cult-classic chocolate wafer bar launched in 1987, was made by which company?",c:["Mars","Hershey","Nestle"],a:1},
+{cat:"Food & Drink",d:5,q:"PB Max, the mourned early-90s peanut butter candy on a whole-grain cookie, was discontinued by which maker?",c:["Hershey","Mars","Nabisco"],a:1},
+{cat:"Food & Drink",d:5,q:"Pizzarias, the pizza-flavored chips that were a 1991 smash, came from which cookie-and-cracker company?",c:["Nabisco","Frito-Lay","Keebler"],a:2},
+{cat:"Food & Drink",d:5,q:"Fruit Wrinkles, the chewy 80s lunchbox fruit snack with the shriveled look, came from which brand?",c:["Betty Crocker","Del Monte","Sunkist"],a:0},
+{cat:"Food & Drink",d:5,q:"Pop Qwiz, the 90s microwave popcorn from Pop Secret, held what surprise?",c:["It popped in mystery colors you guessed in advance","Every bag hid a plastic toy","The kernels popped into shapes"],a:0},
+{cat:"Food & Drink",d:5,q:"Sprinkle Spangles, the 1993 General Mills cereal, was pitched by what kind of mascot?",c:["A tap-dancing shooting star","A wish-granting genie","A sprinkle-spraying wizard"],a:1},
+{cat:"Food & Drink",d:5,q:"Hidden Treasures, the 1993 General Mills cereal, hid what inside some of its corn squares?",c:["Chocolate coins","Tiny marshmallows","A fruity filling"],a:2},
+{cat:"Food & Drink",d:5,q:"Wendy's 'SuperBar,' a fixture of the late 80s and early 90s, was what?",c:["A 40-topping burger menu","A half-pound triple burger","An all-you-can-eat buffet"],a:2},
+{cat:"Food & Drink",d:5,q:"Ben & Jerry's 1994 'Yo! I'm Your CEO' contest invited the public to apply for the top job by sending what?",c:["A 100-word essay","A new pint flavor recipe","A homemade TV commercial"],a:0},
+{cat:"Food & Drink",d:5,q:"Until its 1990 switch to vegetable oil, McDonald's cooked its famous fries in what?",c:["Pure peanut oil","Beef tallow","Lard"],a:1}
+);
+
+window.RETRO_BANK = window.RETRO_BANK || [];
+window.RETRO_BANK.push(
+{cat:"Cars",d:1,q:"In Back to the Future (1985), what car did Doc Brown turn into a time machine?",c:["A Chevrolet Corvette","A DeLorean","A Pontiac Firebird"],a:1},
+{cat:"Cars",d:1,q:"How fast did the Back to the Future time machine need to go to travel through time?",c:["88 mph","66 mph","101 mph"],a:0},
+{cat:"Cars",d:1,q:"KITT, the talking crime-fighting car, starred on which 1980s TV show?",c:["The A-Team","Hardcastle and McCormick","Knight Rider"],a:2},
+{cat:"Cars",d:1,q:"In Ferris Bueller's Day Off (1986), Cameron's dad owned a prized 1961 sports car from which brand?",c:["Ferrari","Lamborghini","Porsche"],a:0},
+{cat:"Cars",d:1,q:"The 1992 Dodge Viper packed what kind of engine?",c:["A V6","A V8","A V10"],a:2},
+{cat:"Cars",d:1,q:"KITT of Knight Rider was based on what car?",c:["A Chevrolet Corvette","A Pontiac Firebird Trans Am","A Ford Mustang"],a:1},
+{cat:"Cars",d:1,q:"The tiny Geo Metro of the early 1990s was best known for what?",c:["Blistering acceleration","Great gas mileage","Luxurious interiors"],a:1},
+{cat:"Cars",d:1,q:"The scissor-doored Countach, a staple of 1980s bedroom posters, was built by which automaker?",c:["Ferrari","Maserati","Lamborghini"],a:2},
+{cat:"Cars",d:1,q:"The bargain-basement Yugo GV, launched in the US in 1985, was imported from which country?",c:["Yugoslavia","Poland","Romania"],a:0},
+{cat:"Cars",d:1,q:"Formula 1 great Ayrton Senna came from which country?",c:["Argentina","Mexico","Brazil"],a:2},
+{cat:"Cars",d:1,q:"The 1990 Tom Cruise movie Days of Thunder was set in which kind of racing?",c:["NASCAR stock cars","IndyCar","Formula 1"],a:0},
+{cat:"Cars",d:1,q:"What car number did NASCAR legend Dale Earnhardt make famous in the late 1980s and 1990s?",c:["24","3","43"],a:1},
+{cat:"Cars",d:1,q:"In 1994, O.J. Simpson led police on a slow-speed chase in a white what?",c:["Ford Bronco","Chevrolet Blazer","Jeep Cherokee"],a:0},
+{cat:"Cars",d:1,q:"The Dodge Caravan and Plymouth Voyager kicked off the mid-1980s minivan boom for which automaker?",c:["Ford","Chrysler","General Motors"],a:1},
+{cat:"Cars",d:1,q:"The hugely popular Ford Explorer, introduced for 1991, was what type of vehicle?",c:["A minivan","A pickup truck","A sport utility vehicle"],a:2},
+{cat:"Cars",d:1,q:"'The Ultimate Driving Machine' was the long-running slogan of which automaker?",c:["Mercedes-Benz","BMW","Audi"],a:1},
+{cat:"Cars",d:1,q:"'The Heartbeat of America' was the 1980s slogan of which brand?",c:["Chevrolet","Ford","Dodge"],a:0},
+{cat:"Cars",d:1,q:"The Mazda MX-5 Miata, launched in 1989, was what style of car?",c:["A four-door sedan","A pickup truck","A two-seat convertible"],a:2},
+{cat:"Cars",d:1,q:"In the late 1980s and early 1990s, what music format began replacing the cassette deck in car stereos?",c:["8-track tape","Vinyl record","Compact disc"],a:2},
+{cat:"Cars",d:1,q:"When Vanilla Ice rapped about 'rollin' in my five-point-oh' in 1990, what car was he talking about?",c:["A Chevrolet Camaro","A Ford Mustang","A Pontiac GTO"],a:1},
+{cat:"Cars",d:1,q:"In 1987, Jeep replaced the CJ-7 with what new model?",c:["The Wrangler","The Cherokee","The Comanche"],a:0},
+{cat:"Cars",d:2,q:"Lexus, launched in 1989, is the luxury division of which automaker?",c:["Nissan","Honda","Toyota"],a:2},
+{cat:"Cars",d:2,q:"Acura, the luxury brand that launched the NSX in 1990, is the upscale division of which automaker?",c:["Toyota","Honda","Mitsubishi"],a:1},
+{cat:"Cars",d:2,q:"The aerodynamic 'jellybean' sedan that became a smash hit for Ford in 1986 was the what?",c:["Taurus","Tempo","Fairmont"],a:0},
+{cat:"Cars",d:2,q:"Saturn, the 'different kind of car company' that started selling cars in 1990, was created by which automaker?",c:["Ford","General Motors","Chrysler"],a:1},
+{cat:"Cars",d:2,q:"Infiniti, which debuted for 1990, is the luxury brand of which automaker?",c:["Nissan","Mazda","Subaru"],a:0},
+{cat:"Cars",d:2,q:"Complete the famous 1988 slogan: 'This is not your father's...'",c:["Buick","Cadillac","Oldsmobile"],a:2},
+{cat:"Cars",d:2,q:"The Ferrari F40, unveiled in 1987, was built to celebrate what?",c:["Ferrari's 40th anniversary","Enzo Ferrari's 40th race win","40 years of Formula 1"],a:0},
+{cat:"Cars",d:2,q:"The Mazda RX-7 stood out from other late-1980s sports cars because of what engine type?",c:["A diesel","A flat-six","A rotary"],a:2},
+{cat:"Cars",d:2,q:"In the mid-1980s, the Datsun brand in the US was renamed to what?",c:["Infiniti","Nissan","Acura"],a:1},
+{cat:"Cars",d:2,q:"The DeLorean DMC-12's body panels were famously made of what?",c:["Unpainted stainless steel","Fiberglass","Carbon fiber"],a:0},
+{cat:"Cars",d:2,q:"What style of doors did the DeLorean DMC-12 have?",c:["Scissor doors","Gullwing doors","Sliding doors"],a:1},
+{cat:"Cars",d:2,q:"What was Dale Earnhardt's famous NASCAR nickname?",c:["The King","Awesome Dale","The Intimidator"],a:2},
+{cat:"Cars",d:2,q:"In Wayne's World (1992), the 'Mirthmobile' was a light-blue example of what quirky car?",c:["A Ford Pinto","A Volkswagen Beetle","An AMC Pacer"],a:2},
+{cat:"Cars",d:2,q:"On Miami Vice, Sonny Crockett's white Ferrari from 1986 onward was which model?",c:["A Testarossa","An F40","A Mondial"],a:0},
+{cat:"Cars",d:2,q:"In Jurassic Park (1993), the electric tour vehicles were customized versions of which SUV?",c:["The Chevrolet Blazer","The Ford Explorer","The Toyota 4Runner"],a:1},
+{cat:"Cars",d:2,q:"The Club, heavily advertised in the early 1990s, locked onto what part of your car to stop thieves?",c:["The steering wheel","The gearshift","The gas cap"],a:0},
+{cat:"Cars",d:2,q:"Plymouth's twin of the Dodge Caravan minivan was called the what?",c:["Reliant","Sundance","Voyager"],a:2},
+{cat:"Cars",d:2,q:"In the early 1990s, the average US price for a gallon of gas was closest to which figure?",c:["$2.15","$1.15","$3.15"],a:1},
+{cat:"Cars",d:2,q:"What kind of headlights did the original Mazda Miata have?",c:["Fixed round lights","Pop-up lights","Lights hidden behind grilles"],a:1},
+{cat:"Cars",d:2,q:"Bob Seger's 'Like a Rock' became the anthem for whose truck ads starting in the early 1990s?",c:["Chevrolet","Ford","Dodge"],a:0},
+{cat:"Cars",d:2,q:"ABS, the safety tech spreading across cars around 1990, stands for what?",c:["Automatic brake sensor","Auxiliary brake supply","Anti-lock braking system"],a:2},
+{cat:"Cars",d:3,q:"According to Doc Brown, how much power did the DeLorean's flux capacitor need?",c:["1.21 gigawatts","2.21 gigawatts","1.21 megawatts"],a:0},
+{cat:"Cars",d:3,q:"Ayrton Senna won all three of his F1 world titles (1988-1991) driving for which team?",c:["Ferrari","Lotus","McLaren"],a:2},
+{cat:"Cars",d:3,q:"In Back to the Future Part III (1990), what pushed the DeLorean to 88 mph?",c:["A team of horses","A steam locomotive","A rocket sled"],a:1},
+{cat:"Cars",d:3,q:"The Dodge Stealth, new for 1991, was a rebadged version of which Japanese sports car?",c:["The Nissan 300ZX","The Toyota Supra","The Mitsubishi 3000GT"],a:2},
+{cat:"Cars",d:3,q:"The menacing 1987 Buick GNX was the ultimate send-off version of which turbocharged Buick?",c:["The Skyhawk","The Grand National","The LeSabre"],a:1},
+{cat:"Cars",d:3,q:"Which action star famously pushed AM General to sell a civilian Humvee, taking delivery in 1992?",c:["Arnold Schwarzenegger","Sylvester Stallone","Chuck Norris"],a:0},
+{cat:"Cars",d:3,q:"What car number did Jeff Gordon drive for his rainbow-colored 1993 NASCAR rookie season?",c:["28","24","6"],a:1},
+{cat:"Cars",d:3,q:"The Eagle Talon and Plymouth Laser were platform twins of which 1990 sport coupe?",c:["The Mitsubishi Eclipse","The Honda Prelude","The Mazda MX-6"],a:0},
+{cat:"Cars",d:3,q:"NASCAR's Richard Petty ran his farewell 'Fan Appreciation Tour' in which season?",c:["1988","1990","1992"],a:2},
+{cat:"Cars",d:3,q:"In 1990, Lamborghini replaced the long-running Countach with which new flagship?",c:["The Murcielago","The Diablo","The Jalpa"],a:1},
+{cat:"Cars",d:3,q:"Ferrari's Testarossa name, Italian for 'redhead,' refers to what being painted red?",c:["Its brake calipers","Its steering wheel","Its engine cam covers"],a:2},
+{cat:"Cars",d:3,q:"What was the name of Tom Cruise's driver character in Days of Thunder (1990)?",c:["Cole Trickle","Rowdy Burns","Russ Wheeler"],a:0},
+{cat:"Cars",d:3,q:"The 1989 Mazda Miata was openly inspired by which classic British roadster?",c:["The Lotus Elan","The Jaguar E-Type","The Triumph TR7"],a:0},
+{cat:"Cars",d:3,q:"On the hot-rod 1989 Ford Taurus SHO, what did SHO stand for?",c:["Sport Handling Option","Super High Output","Special Homologation Order"],a:1},
+{cat:"Cars",d:3,q:"Chrysler bought which company in 1987, mainly to get its hands on Jeep?",c:["International Harvester","Studebaker","American Motors"],a:2},
+{cat:"Cars",d:3,q:"What untranslatable German word did Volkswagen build its 1990 US ad campaign around?",c:["Wanderlust","Autobahn","Fahrvergnugen"],a:2},
+{cat:"Cars",d:3,q:"What was the first Hyundai sold in America, arriving in 1986 at a rock-bottom price?",c:["The Excel","The Sonata","The Elantra"],a:0},
+{cat:"Cars",d:3,q:"Lexus launched in 1989 with which flagship sedan?",c:["The ES 250","The LS 400","The GS 300"],a:1},
+{cat:"Cars",d:3,q:"In Clueless (1995), Cher fails her driving test in what car?",c:["A white Jeep","A red Miata","A pink Cadillac"],a:0},
+{cat:"Cars",d:3,q:"The Toyota MR2 of the late 1980s put its engine where?",c:["Up front under the hood","In the rear over the axle","In the middle, behind the seats"],a:2},
+{cat:"Cars",d:3,q:"What black 4x4 pickup is Marty McFly's dream truck in Back to the Future?",c:["A Ford Ranger","A Toyota","A Chevrolet S-10"],a:1},
+{cat:"Cars",d:4,q:"The 375-horsepower 1990 Corvette ZR-1 carried what nickname?",c:["The Widowmaker","King of the Hill","The Beast"],a:1},
+{cat:"Cars",d:4,q:"Which actor provided the voice of KITT on Knight Rider?",c:["William Daniels","Mr. T","David Hasselhoff"],a:0},
+{cat:"Cars",d:4,q:"Which company built the high-revving V6 for the Ford Taurus SHO?",c:["Cosworth","Porsche","Yamaha"],a:2},
+{cat:"Cars",d:4,q:"Which F1 champion gave Honda development feedback on the Acura NSX?",c:["Ayrton Senna","Alain Prost","Nelson Piquet"],a:0},
+{cat:"Cars",d:4,q:"What monster nickname did the R32 Nissan Skyline GT-R earn after crushing rivals from 1989 on?",c:["Mothra","Godzilla","King Kong"],a:1},
+{cat:"Cars",d:4,q:"How did Chrysler introduce the 1993 Jeep Grand Cherokee at the 1992 Detroit auto show?",c:["It was dropped from a helicopter","It was driven out of a giant crate","It was driven up the steps and through a plate-glass window"],a:2},
+{cat:"Cars",d:4,q:"In 1989, which American automaker struck a deal to buy Jaguar?",c:["Chrysler","General Motors","Ford"],a:2},
+{cat:"Cars",d:4,q:"Which was the first US automaker to make driver's-side airbags standard equipment, starting in the late 1980s?",c:["General Motors","Chrysler","Ford"],a:1},
+{cat:"Cars",d:4,q:"The 1991 Ford Explorer effectively replaced which smaller Ford SUV?",c:["The Bronco II","The full-size Bronco","The Ranger"],a:0},
+{cat:"Cars",d:4,q:"A 1986 60 Minutes report on 'sudden unintended acceleration' hammered sales of which car?",c:["The Volvo 740","The Audi 5000","The Saab 900"],a:1},
+{cat:"Cars",d:4,q:"Which tippy little SUV did Consumer Reports rate 'Not Acceptable' in 1988 over rollover fears?",c:["The Suzuki Samurai","The Isuzu Trooper","The Daihatsu Rocky"],a:0},
+{cat:"Cars",d:4,q:"In 1987, Congress let states raise rural interstate speed limits from 55 mph to what?",c:["70 mph","75 mph","65 mph"],a:2},
+{cat:"Cars",d:4,q:"Unlike the Ferrari F40, the Porsche 959 of the late 1980s put its power down through what?",c:["All-wheel drive","Front-wheel drive","A five-speed automatic"],a:0},
+{cat:"Cars",d:4,q:"The '220' in the 1992 Jaguar XJ220's name referred to what?",c:["Its horsepower per liter","Its price in thousands of pounds","Its targeted top speed in mph"],a:2},
+{cat:"Cars",d:4,q:"For most of the years from 1987 to 1994, Lamborghini was owned by which American company?",c:["Ford","Chrysler","General Motors"],a:1},
+{cat:"Cars",d:4,q:"GMC's 1991 Syclone shocked the car world as a turbocharged, all-wheel-drive what?",c:["Minivan","Station wagon","Pickup truck"],a:2},
+{cat:"Cars",d:4,q:"Mustangs built from 1979 through 1993 are known by what body nickname?",c:["Fox body","Shark body","Coke-bottle body"],a:0},
+{cat:"Cars",d:4,q:"In My Cousin Vinny (1992), Vinny's clients drove what metallic mint-green 1964 convertible?",c:["A Chevrolet Bel Air","A Buick Skylark","An Oldsmobile 442"],a:1},
+{cat:"Cars",d:4,q:"What was the Yugo's famous rock-bottom sticker price at its 1985 US launch?",c:["$5,990","$3,990","$2,490"],a:1},
+{cat:"Cars",d:4,q:"Nigel Mansell finally won the 1992 F1 world title driving for which team?",c:["Ferrari","Benetton","Williams"],a:2},
+{cat:"Cars",d:4,q:"A famous Lexus launch ad showed the 1990 LS 400 running on rollers with what stacked on its hood?",c:["Champagne glasses","A house of cards","Bowling balls"],a:0},
+{cat:"Cars",d:5,q:"Which Italian supercar maker helped Dodge rework the Viper's V10 in aluminum?",c:["Ferrari","De Tomaso","Lamborghini"],a:2},
+{cat:"Cars",d:5,q:"Which British firm helped GM design the ZR-1 Corvette's exotic 32-valve LT5 V8?",c:["Lotus","Cosworth","McLaren"],a:0},
+{cat:"Cars",d:5,q:"How much horsepower did the 8.0-liter V10 in the 1992 Dodge Viper RT/10 make?",c:["350","400","450"],a:1},
+{cat:"Cars",d:5,q:"Bodies for the Cadillac Allante were built by Pininfarina and delivered to Detroit how?",c:["By ocean freighter","Flown from Italy on 747s","By rail from Mexico"],a:1},
+{cat:"Cars",d:5,q:"Mazda said the name 'Miata' comes from an Old High German word meaning what?",c:["Reward","Speed","Joy"],a:0},
+{cat:"Cars",d:5,q:"The 1988 Buick Reatta two-seater offered what then-futuristic dashboard feature?",c:["A head-up display","Night vision","A touchscreen control panel"],a:2},
+{cat:"Cars",d:5,q:"The wild W8 Twin Turbo supercar of the early 1990s came from which American company?",c:["Vector","Mosler","Panoz"],a:0},
+{cat:"Cars",d:5,q:"Under a 1989 'gentlemen's agreement,' Japanese automakers capped advertised horsepower at about what?",c:["300","276","250"],a:1},
+{cat:"Cars",d:5,q:"The Bugatti EB110 debuted in 1991 on the 110th anniversary of whose birth?",c:["Jean Bugatti","Romano Artioli","Ettore Bugatti"],a:2},
+{cat:"Cars",d:5,q:"GM's swoopy 1990 APV minivans (Lumina APV, Trans Sport, Silhouette) earned what nickname?",c:["Dustbusters","Doorstops","Space shuttles"],a:0},
+{cat:"Cars",d:5,q:"The Geo Prizm was built at NUMMI, GM's California joint-venture plant with which partner?",c:["Honda","Mazda","Toyota"],a:2},
+{cat:"Cars",d:5,q:"Where was the engine in the egg-shaped 1991 Toyota Previa minivan?",c:["Over the rear axle","Under the front seats","Ahead of the front axle"],a:1},
+{cat:"Cars",d:5,q:"The Ford Festiva minicar of the late 1980s was designed by Mazda and assembled by which company?",c:["Hyundai","Daewoo","Kia"],a:2},
+{cat:"Cars",d:5,q:"The 1991 Mercury Capri, a front-drive Miata rival, was built in which country?",c:["Australia","Mexico","South Korea"],a:0},
+{cat:"Cars",d:5,q:"Merkur, Ford's short-lived 1985-1989 US brand, sold what?",c:["Rebadged Mazdas","German-built Ford Sierras and Scorpios","Budget Korean hatchbacks"],a:1},
+{cat:"Cars",d:5,q:"Who won the 1992 NASCAR Winston Cup as a self-owned underdog, beating Bill Elliott by 10 points?",c:["Alan Kulwicki","Davey Allison","Harry Gant"],a:0},
+{cat:"Cars",d:5,q:"Which French automaker gave up on the US market and left in 1991?",c:["Renault","Citroen","Peugeot"],a:2},
+{cat:"Cars",d:5,q:"Which driver joined the four-time winners' club with his final Indy 500 victory in 1991?",c:["Al Unser Jr.","Rick Mears","Bobby Rahal"],a:1},
+{cat:"Cars",d:5,q:"In 1988, GM put its first production head-up display in a car from which division?",c:["Oldsmobile","Cadillac","Buick"],a:0},
+{cat:"Cars",d:5,q:"The 1992 Subaru SVX, styled by Giugiaro, had what odd glass feature?",c:["No rear window","A window-within-a-window design","Gullwing glass roof panels"],a:1},
+{cat:"Cars",d:5,q:"Rallying's monstrous Group B cars were banned from the World Rally Championship after which season?",c:["1984","1988","1986"],a:2}
+);
+
+window.RETRO_BANK = window.RETRO_BANK || [];
+window.RETRO_BANK.push(
+{cat:"Tech & Toys",d:1,q:"Teddy Ruxpin, the hit talking toy of 1985, was what kind of animal?",c:["A rabbit","A bear","A parrot"],a:1},
+{cat:"Tech & Toys",d:1,q:"The Super Soaker, launched in 1990, blasted what?",c:["Water","Foam darts","Silly String"],a:0},
+{cat:"Tech & Toys",d:1,q:"Beanie Babies, introduced in 1993, were floppy plush animals filled with what?",c:["Feathers","Sand","Plastic pellets"],a:2},
+{cat:"Tech & Toys",d:1,q:"What machine did you need at home to watch a VHS tape?",c:["A slide projector","A VCR","A record player"],a:1},
+{cat:"Tech & Toys",d:1,q:"Sony's Walkman let people carry around music stored on what?",c:["Cassette tapes","Vinyl records","Memory cards"],a:0},
+{cat:"Tech & Toys",d:1,q:"Sony's Discman was a portable player for what?",c:["8-track tapes","Microcassettes","CDs"],a:2},
+{cat:"Tech & Toys",d:1,q:"Which company released Windows 95?",c:["Apple","Microsoft","IBM"],a:1},
+{cat:"Tech & Toys",d:1,q:"What did the letters in the online service AOL stand for?",c:["America Online","Automated Online Link","American Office Library"],a:0},
+{cat:"Tech & Toys",d:1,q:"Getting online with a dial-up modem tied up which household line?",c:["The TV cable","The power line","The telephone line"],a:2},
+{cat:"Tech & Toys",d:1,q:"What was the Teenage Mutant Ninja Turtles' favorite food?",c:["Hot dogs","Pizza","Tacos"],a:1},
+{cat:"Tech & Toys",d:1,q:"The Mighty Morphin Power Rangers combined their Zords to form what giant robot?",c:["The Megazord","The Ultrabot","The Dynotron"],a:0},
+{cat:"Tech & Toys",d:1,q:"The Talkboy that Kevin used in Home Alone 2 (1992) was what kind of gadget?",c:["A walkie-talkie","A video camera","A cassette recorder"],a:2},
+{cat:"Tech & Toys",d:1,q:"Skip-It, heavily advertised in the early 90s, was a toy you looped around your what?",c:["Wrist","Ankle","Neck"],a:1},
+{cat:"Tech & Toys",d:1,q:"Nerf balls and blasters were famous for being made of soft what?",c:["Foam","Rubber","Felt"],a:0},
+{cat:"Tech & Toys",d:1,q:"Polly Pocket playsets of the era were designed to be small enough to fit where?",c:["Inside a locker","On a bookshelf","In your pocket"],a:2},
+{cat:"Tech & Toys",d:1,q:"Which toy company makes Barbie?",c:["Hasbro","Mattel","Kenner"],a:1},
+{cat:"Tech & Toys",d:1,q:"LEGO bricks originally come from which country?",c:["Denmark","Germany","Sweden"],a:0},
+{cat:"Tech & Toys",d:1,q:"Because of the sound they made, pagers were commonly nicknamed what?",c:["Buzzers","Ringers","Beepers"],a:2},
+{cat:"Tech & Toys",d:1,q:"Late-80s portable cell phones were nicknamed 'brick phones' because of their what?",c:["Huge size and weight","Red color","Square screens"],a:0},
+{cat:"Tech & Toys",d:1,q:"The Macintosh computers of the late 80s and early 90s were made by which company?",c:["Commodore","Apple","Dell"],a:1},
+{cat:"Tech & Toys",d:1,q:"In music, what do the letters CD stand for?",c:["Cassette Deck","Certified Digital","Compact Disc"],a:2},
+{cat:"Tech & Toys",d:2,q:"Microsoft launched Windows 95 with midnight store openings in what year?",c:["1991","1993","1995"],a:2},
+{cat:"Tech & Toys",d:2,q:"Windows 95 introduced what now-famous button in the corner of the screen?",c:["The Start button","The Home button","The Go button"],a:0},
+{cat:"Tech & Toys",d:2,q:"What cheerful phrase did AOL announce when email arrived?",c:["\"Mail call!\"","\"You've got mail!\"","\"Letter incoming!\""],a:1},
+{cat:"Tech & Toys",d:2,q:"Netscape Navigator, released in 1994, was an early hit example of what kind of software?",c:["A web browser","A spreadsheet","An antivirus program"],a:0},
+{cat:"Tech & Toys",d:2,q:"Teddy Ruxpin told his stories when you inserted what into his back?",c:["A floppy disk","A tiny record","A cassette tape"],a:2},
+{cat:"Tech & Toys",d:2,q:"In Home Alone 2, Kevin used the Talkboy to fool adults by playing his voice back how?",c:["Sped up like a chipmunk","Slowed down to sound like an adult","Backwards"],a:1},
+{cat:"Tech & Toys",d:2,q:"VHS won the home video format war by beating which rival Sony tape format?",c:["Betamax","LaserVision","MiniDV"],a:0},
+{cat:"Tech & Toys",d:2,q:"Video rental stores begged customers to be kind and do what before returning a VHS tape?",c:["Re-label it","Clean it","Rewind it"],a:2},
+{cat:"Tech & Toys",d:2,q:"Casio's famously nerdy wristwatches of the era had what built in?",c:["A compass","A calculator","A radio"],a:1},
+{cat:"Tech & Toys",d:2,q:"Which card game shipped with Windows and got millions of office workers using a mouse?",c:["Solitaire","Uno","Go Fish"],a:0},
+{cat:"Tech & Toys",d:2,q:"On Saved by the Bell, Zack Morris famously carried around what oversized gadget?",c:["A boom box","A laptop","A cell phone"],a:2},
+{cat:"Tech & Toys",d:2,q:"In the early 90s, AOL flooded mailboxes with free trials of its software on what?",c:["VHS tapes","Floppy disks","Vinyl records"],a:1},
+{cat:"Tech & Toys",d:2,q:"Super Soakers squirted much farther than old squirt guns because you pumped them up with what?",c:["Air pressure","Batteries","CO2 cartridges"],a:0},
+{cat:"Tech & Toys",d:2,q:"DUPLO bricks are a chunkier version of LEGO designed for whom?",c:["Architects","Collectors","Toddlers"],a:2},
+{cat:"Tech & Toys",d:2,q:"Early-90s slap bracelets did what when you smacked them on your wrist?",c:["Lit up","Curled around it","Squeaked"],a:1},
+{cat:"Tech & Toys",d:2,q:"Rollerblades, the early-90s skating craze, arranged their wheels how?",c:["In a single line","Two by two","In a triangle"],a:0},
+{cat:"Tech & Toys",d:2,q:"In a late-80s office, which machine sent copies of paper documents over phone lines?",c:["The laminator","The shredder","The fax machine"],a:2},
+{cat:"Tech & Toys",d:2,q:"Home answering machines of the era typically recorded messages onto what?",c:["CDs","Cassette tapes","Hard drives"],a:1},
+{cat:"Tech & Toys",d:2,q:"Swatch, the colorful watch brand that boomed in the late 80s, comes from which country?",c:["Switzerland","Japan","Italy"],a:0},
+{cat:"Tech & Toys",d:2,q:"Connecting to the internet by dial-up modem was famous for making what noise?",c:["A soft chime","Total silence","A screeching handshake"],a:2},
+{cat:"Tech & Toys",d:2,q:"Complete the Transformers slogan: \"More than meets the ___.\"",c:["Mind","Eye","Sky"],a:1},
+{cat:"Tech & Toys",d:3,q:"Which company made the wildly popular Teenage Mutant Ninja Turtles action figures starting in 1988?",c:["Kenner","Playmates","Galoob"],a:1},
+{cat:"Tech & Toys",d:3,q:"Mighty Morphin Power Rangers reused monster-fight footage from a TV series made in which country?",c:["Japan","South Korea","Hong Kong"],a:0},
+{cat:"Tech & Toys",d:3,q:"Teen Talk Barbie caused a controversy in 1992 for saying what phrase?",c:["\"Homework is boring\"","\"Shopping is life\"","\"Math class is tough\""],a:2},
+{cat:"Tech & Toys",d:3,q:"Mosaic, the software sensation of 1993, let ordinary people do what?",c:["Edit photos","Browse the web","Burn CDs"],a:1},
+{cat:"Tech & Toys",d:3,q:"Who invented the World Wide Web around 1990?",c:["Tim Berners-Lee","Bill Gates","Steve Jobs"],a:0},
+{cat:"Tech & Toys",d:3,q:"In 1993 Intel moved past the 486 with a chip carrying what brand name?",c:["Athlon","PowerPC","Pentium"],a:2},
+{cat:"Tech & Toys",d:3,q:"When Amazon.com opened for business in 1995, what did it sell?",c:["Music CDs","Books","Computer parts"],a:1},
+{cat:"Tech & Toys",d:3,q:"How much data fit on a standard high-density 3.5-inch floppy disk?",c:["1.44 MB","14.4 MB","144 MB"],a:0},
+{cat:"Tech & Toys",d:3,q:"In CD-ROM, what does the ROM part stand for?",c:["Rotating Optical Media","Remote Operating Mode","Read-Only Memory"],a:2},
+{cat:"Tech & Toys",d:3,q:"Windows 3.1, the version most early-90s office PCs ran before Windows 95, arrived in what year?",c:["1989","1992","1994"],a:1},
+{cat:"Tech & Toys",d:3,q:"What name did Sony use for its popular line of camcorders?",c:["Handycam","Videomate","MovieMaster"],a:0},
+{cat:"Tech & Toys",d:3,q:"Which companion toy could plug into Teddy Ruxpin with a cable and join in his stories?",c:["Wooly","Munch","Grubby"],a:2},
+{cat:"Tech & Toys",d:3,q:"In the game of Pogs, what was the heavier piece you threw at the stack called?",c:["A striker","A slammer","A basher"],a:1},
+{cat:"Tech & Toys",d:3,q:"Treasure Trolls, the early-90s twist on troll dolls, each had what in their belly?",c:["A sparkly gem","A squeaker","A secret compartment"],a:0},
+{cat:"Tech & Toys",d:3,q:"What feature did the 90s version of Skip-It add to its ball?",c:["A flashing light","A whistle","A lap counter"],a:2},
+{cat:"Tech & Toys",d:3,q:"Beanie Babies carried a red swing tag in what shape?",c:["A star","A heart","A paw print"],a:1},
+{cat:"Tech & Toys",d:3,q:"Tiger Electronics cranked out cheap 90s handheld games that used what kind of display?",c:["LCD screens","Color CRTs","Projection screens"],a:0},
+{cat:"Tech & Toys",d:3,q:"Bandai's Power Rangers action figures were the sold-out, impossible-to-find toy of which holiday season?",c:["Christmas 1988","Christmas 1990","Christmas 1993"],a:2},
+{cat:"Tech & Toys",d:3,q:"On Mighty Morphin Power Rangers, Tommy first joined the team as which Ranger?",c:["The Black Ranger","The Green Ranger","The Blue Ranger"],a:1},
+{cat:"Tech & Toys",d:3,q:"LaserDiscs, the videophile format of the era, were about the same size as what?",c:["A vinyl LP","A CD","A floppy disk"],a:0},
+{cat:"Tech & Toys",d:3,q:"Lazer Tag, the 1986 craze, let kids shoot at each other's sensors using what?",c:["Ultrasonic pulses","Radio waves","Infrared light"],a:2},
+{cat:"Tech & Toys",d:4,q:"Super Soaker inventor Lonnie Johnson dreamed it up while working as an engineer for which organization?",c:["NASA","Boeing","General Electric"],a:0},
+{cat:"Tech & Toys",d:4,q:"Which company made Micro Machines, the tiny vehicle craze of the late 80s?",c:["Mattel","Galoob","Tyco"],a:1},
+{cat:"Tech & Toys",d:4,q:"Beanie Babies were created by which reclusive toy tycoon, founder of Ty Inc.?",c:["Ty Cobb","Ty Pennington","Ty Warner"],a:2},
+{cat:"Tech & Toys",d:4,q:"Which Japanese toy giant made the Mighty Morphin Power Rangers action figures?",c:["Bandai","Takara","Tomy"],a:0},
+{cat:"Tech & Toys",d:4,q:"Apple's Newton MessagePad, launched in 1993, was an early example of what?",c:["A laptop","A personal digital assistant","A smartwatch"],a:1},
+{cat:"Tech & Toys",d:4,q:"What did Apple call its laptop line introduced in 1991?",c:["MacBook","Portable Pro","PowerBook"],a:2},
+{cat:"Tech & Toys",d:4,q:"IBM's famous black business laptop line, launched in 1992, was called what?",c:["ThinkPad","WorkMate","ProNote"],a:0},
+{cat:"Tech & Toys",d:4,q:"Iomega's hit Zip disk of 1995 held how much data, dwarfing the floppy?",c:["10 MB","100 MB","1 GB"],a:1},
+{cat:"Tech & Toys",d:4,q:"Compact VHS-C camcorder tapes could play in a regular VCR only if you used what?",c:["A rewinder","A tracking dial","An adapter cassette"],a:2},
+{cat:"Tech & Toys",d:4,q:"Modem speeds like 14.4k and 28.8k measured data in what units?",c:["Kilobits per second","Kilobytes per minute","Megahertz"],a:0},
+{cat:"Tech & Toys",d:4,q:"Before flat monthly rates, how did AOL bill most subscribers in the early 90s?",c:["Per email sent","By the hour","By megabyte downloaded"],a:1},
+{cat:"Tech & Toys",d:4,q:"Tonka's mid-80s transforming robots, rivals to the Transformers, were called what?",c:["MorphBots","RoboChargers","GoBots"],a:2},
+{cat:"Tech & Toys",d:4,q:"Which beloved character was killed off in the 1986 animated Transformers movie, upsetting kids everywhere?",c:["Optimus Prime","Bumblebee","Grimlock"],a:0},
+{cat:"Tech & Toys",d:4,q:"In the electronic board game Mall Madness, players raced to do what?",c:["Deliver pizzas","Shop at mall stores","Park cars"],a:1},
+{cat:"Tech & Toys",d:4,q:"In the 1991 board game Dream Phone, clues about your secret admirer came from where?",c:["A deck of scratch cards","A spinning wheel","A toy telephone"],a:2},
+{cat:"Tech & Toys",d:4,q:"Tyco's Doodle Bear of 1994 was a plush you could do what to, then wash clean?",c:["Draw on with markers","Dye in the sink","Iron patches onto"],a:0},
+{cat:"Tech & Toys",d:4,q:"The Koosh ball, launched in the late 80s, was a ball made of floppy what?",c:["Suction cups","Rubber strands","Foam noodles"],a:1},
+{cat:"Tech & Toys",d:4,q:"The milk-cap game Pogs took its name from a Hawaiian drink of passion fruit, orange, and what?",c:["Grapefruit","Grape","Guava"],a:2},
+{cat:"Tech & Toys",d:4,q:"IBM's Simon of 1994, often called the first smartphone, was operated how?",c:["With a touchscreen","With a scroll wheel","With voice only"],a:0},
+{cat:"Tech & Toys",d:4,q:"Motorola's MicroTAC of 1989 shrank the cell phone by introducing what design?",c:["A slide-out keyboard","A flip-open mouthpiece","A belt-clip antenna"],a:1},
+{cat:"Tech & Toys",d:4,q:"The most legendary G.I. Joe playset, 1985's USS Flagg, was a seven-and-a-half-foot what?",c:["Submarine","Space shuttle","Aircraft carrier"],a:2},
+{cat:"Tech & Toys",d:5,q:"During development, Windows 95 went by what codename?",c:["Memphis","Chicago","Daytona"],a:1},
+{cat:"Tech & Toys",d:5,q:"Which comedian co-hosted Microsoft's Windows 95 launch event with Bill Gates?",c:["Jay Leno","David Letterman","Jerry Seinfeld"],a:0},
+{cat:"Tech & Toys",d:5,q:"The Mosaic browser was created at NCSA, a research center at which university?",c:["MIT","Stanford","University of Illinois"],a:2},
+{cat:"Tech & Toys",d:5,q:"Which Mosaic programmer went on to co-found Netscape in 1994?",c:["Linus Torvalds","Marc Andreessen","Steve Case"],a:1},
+{cat:"Tech & Toys",d:5,q:"'Eternal September' refers to 1993, when which service unleashed its users onto Usenet?",c:["AOL","CompuServe","Prodigy"],a:0},
+{cat:"Tech & Toys",d:5,q:"The online service Prodigy was a joint venture between IBM and which retailer?",c:["JCPenney","Kmart","Sears"],a:2},
+{cat:"Tech & Toys",d:5,q:"Before taking the AOL name, America Online's parent company was called what?",c:["Digital Gateway Inc.","Quantum Computer Services","Online Horizons"],a:1},
+{cat:"Tech & Toys",d:5,q:"The 1994 flaw in Intel's Pentium chip that forced a recall caused rare errors in what operation?",c:["Division","Addition","Memory addressing"],a:0},
+{cat:"Tech & Toys",d:5,q:"Which company manufactured the original Teddy Ruxpin in 1985?",c:["Coleco","Hasbro","Worlds of Wonder"],a:2},
+{cat:"Tech & Toys",d:5,q:"Under what name was the Super Soaker briefly sold when it first hit shelves in 1990?",c:["The Aqua Cannon","The Power Drencher","The Hydro Blaster"],a:1},
+{cat:"Tech & Toys",d:5,q:"Which toy company originally sold the Super Soaker before Hasbro took over the brand?",c:["Larami","Wham-O","Ohio Art"],a:0},
+{cat:"Tech & Toys",d:5,q:"How many Beanie Babies made up the original lineup introduced in 1993?",c:["Five","Twelve","Nine"],a:2},
+{cat:"Tech & Toys",d:5,q:"Polly Pocket was originally produced by which British toy company?",c:["Corgi Toys","Bluebird Toys","Matchbox"],a:1},
+{cat:"Tech & Toys",d:5,q:"LEGO's 1989 Pirates theme was the first to give minifigures what?",c:["Faces beyond the standard smiley","Metal parts","Battery-powered lights"],a:0},
+{cat:"Tech & Toys",d:5,q:"What recordable digital disc format did Sony introduce in 1992 as a cassette replacement?",c:["DCC","DAT","MiniDisc"],a:2},
+{cat:"Tech & Toys",d:5,q:"Which home computer giant of the 80s, maker of the 64 and the Amiga, went bankrupt in 1994?",c:["Atari","Commodore","Tandy"],a:1},
+{cat:"Tech & Toys",d:5,q:"Roughly how much did Motorola's DynaTAC 8000X brick phone cost at launch?",c:["About $4,000","About $400","About $40,000"],a:0},
+{cat:"Tech & Toys",d:5,q:"Apple's QuickTake 100, released in 1994, was one of the first consumer what?",c:["MP3 players","Inkjet printers","Digital cameras"],a:2},
+{cat:"Tech & Toys",d:5,q:"What was Texas Instruments' first graphing calculator, released in 1990?",c:["TI-30","TI-81","TI-99"],a:1},
+{cat:"Tech & Toys",d:5,q:"The 'AT' command set used to control dial-up modems was named for which modem maker's standard?",c:["Hayes","US Robotics","Zoom"],a:0},
+{cat:"Tech & Toys",d:5,q:"When eBay launched in September 1995, it went by what name?",c:["BidNet","TradeWeb","AuctionWeb"],a:2}
+);
+
+window.RETRO_BANK = window.RETRO_BANK || [];
+window.RETRO_BANK.push(
+{cat:"Fads & Fashion",d:1,q:"The 1994 \"Rachel\" haircut craze was named for a Friends character played by which star?",c:["Jennifer Aniston","Courteney Cox","Lisa Kudrow"],a:0},
+{cat:"Fads & Fashion",d:1,q:"In 1990, MC Hammer made which style of pants a nationwide fad?",c:["Skin-tight leather pants","Bell-bottom corduroys","Baggy, billowy \"Hammer pants\""],a:2},
+{cat:"Fads & Fashion",d:1,q:"Which act recorded \"Macarena,\" the song behind the 1995 dance craze?",c:["Ace of Base","Los del Rio","Tag Team"],a:1},
+{cat:"Fads & Fashion",d:1,q:"What did a slap bracelet do when you slapped it against your wrist?",c:["It lit up and beeped","It instantly curled around your wrist","It changed color"],a:1},
+{cat:"Fads & Fashion",d:1,q:"What does Waldo of Where's Waldo (1987) always wear?",c:["A red-and-white striped shirt","A green trench coat","A blue polka-dot sweater"],a:0},
+{cat:"Fads & Fashion",d:1,q:"Hypercolor shirts, the early-90s fad, changed color in response to what?",c:["Sunlight","Water","Heat"],a:2},
+{cat:"Fads & Fashion",d:1,q:"POGs, the huge early-90s playground craze, were what?",c:["Cardboard discs you stacked and struck with a slammer","Rubber creatures you threw at walls","Metal spinning tops you battled"],a:0},
+{cat:"Fads & Fashion",d:1,q:"What was hiding in every Magic Eye poster of the early 90s?",c:["A celebrity's autograph","A hidden 3D image","A secret written message"],a:1},
+{cat:"Fads & Fashion",d:1,q:"Where was a fanny pack worn?",c:["Over the shoulder","Around the neck","Around the waist"],a:2},
+{cat:"Fads & Fashion",d:1,q:"Which phrase famously describes the mullet haircut?",c:["Short on top, curly on the sides","All party, all the time","Business in the front, party in the back"],a:2},
+{cat:"Fads & Fashion",d:1,q:"Which shirt became the uniform of the early-90s grunge look?",c:["The flannel shirt","The polo shirt","The tuxedo shirt"],a:0},
+{cat:"Fads & Fashion",d:1,q:"A Trapper Keeper, the must-have school item, was what?",c:["A pencil sharpener","A binder that organized folders","A locker organizer shelf"],a:1},
+{cat:"Fads & Fashion",d:1,q:"Acid-wash jeans were known for what look?",c:["A mottled, bleached-out finish","Neon pink dye","Leather patches on the knees"],a:0},
+{cat:"Fads & Fashion",d:1,q:"Garbage Pail Kids trading cards (1985) were a gross-out parody of which toys?",c:["Barbie dolls","My Little Pony","Cabbage Patch Kids"],a:2},
+{cat:"Fads & Fashion",d:1,q:"Jelly shoes, the see-through footwear fad, were made of what?",c:["Woven straw","Soft plastic","Recycled rubber tires"],a:1},
+{cat:"Fads & Fashion",d:1,q:"When a 90s kid yelled \"Psych!\" after a promise, what did it mean?",c:["I'm serious","Just kidding, fooled you","Hurry up"],a:1},
+{cat:"Fads & Fashion",d:1,q:"The Running Man, huge in the late 80s and early 90s, involved doing what?",c:["Spinning on your head","Swinging an invisible lasso","Mimicking running in place with sliding steps"],a:2},
+{cat:"Fads & Fashion",d:1,q:"Zubaz, the wild baggy pants of the early 90s, were best known for which print?",c:["Zebra stripes","Polka dots","Plaid"],a:0},
+{cat:"Fads & Fashion",d:1,q:"The dismissive catchphrase \"As if!\" exploded after which 1995 movie?",c:["Wayne's World","Dazed and Confused","Clueless"],a:2},
+{cat:"Fads & Fashion",d:1,q:"\"Hasta la vista, baby\" became a national catchphrase thanks to which 1991 movie?",c:["Terminator 2: Judgment Day","Point Break","Total Recall"],a:0},
+{cat:"Fads & Fashion",d:1,q:"Swatch watches, wildly collected in the late 80s, were known for being what?",c:["Solid gold and expensive","Colorful, cheap and plastic","Digital with calculators"],a:1},
+{cat:"Fads & Fashion",d:2,q:"Rap duo Kris Kross of \"Jump\" fame (1992) sparked a fad by wearing their clothes how?",c:["Backwards","Inside out","Three sizes too small"],a:0},
+{cat:"Fads & Fashion",d:2,q:"Why did many schools ban slap bracelets in the early 90s?",c:["They made too much noise in class","Teachers thought they spread germs","Cheap versions had metal edges that cut wrists"],a:2},
+{cat:"Fads & Fashion",d:2,q:"Mullet-sporting Billy Ray Cyrus set off a 1992 line-dancing craze with which song?",c:["Boot Scootin' Boogie","Achy Breaky Heart","Friends in Low Places"],a:1},
+{cat:"Fads & Fashion",d:2,q:"Saying a sentence and then adding \"...NOT!\" was popularized by which 1992 movie?",c:["Encino Man","Wayne's World","Cool Runnings"],a:1},
+{cat:"Fads & Fashion",d:2,q:"Which catchphrase belongs to Bart Simpson, whose face covered T-shirts in 1990?",c:["Don't have a cow, man!","Did I do that?","How rude!"],a:0},
+{cat:"Fads & Fashion",d:2,q:"Steve Urkel asked \"Did I do that?\" on which hit sitcom?",c:["Full House","The Fresh Prince of Bel-Air","Family Matters"],a:2},
+{cat:"Fads & Fashion",d:2,q:"Madonna's 1990 hit set off a craze for which stylized posing dance?",c:["Voguing","The Robot","Breakdancing"],a:0},
+{cat:"Fads & Fashion",d:2,q:"Starter jackets, the coveted early-90s outerwear, featured what on them?",c:["Rock band logos","Pro sports team logos","Cartoon characters"],a:1},
+{cat:"Fads & Fashion",d:2,q:"Complete the famous TV jingle for the terracotta pet you grow: \"...\"",c:["Plop plop, fizz fizz","Ba-da-ba-ba-ba","Ch-ch-ch-Chia!"],a:2},
+{cat:"Fads & Fashion",d:2,q:"Which drum-beating battery mascot debuted in 1989 and just kept going and going?",c:["The Rayovac Rabbit","The Duracell Duck","The Energizer Bunny"],a:2},
+{cat:"Fads & Fashion",d:2,q:"Bill and Ted (1989) said which word while playing air guitar?",c:["Excellent!","Groovy!","Booyah!"],a:0},
+{cat:"Fads & Fashion",d:2,q:"\"Cowabunga!\" became late-80s kid slang mostly thanks to which franchise?",c:["Alvin and the Chipmunks","Teenage Mutant Ninja Turtles","Biker Mice from Mars"],a:1},
+{cat:"Fads & Fashion",d:2,q:"During the grunge era, what did kids famously tie around their waists?",c:["A flannel shirt","A windbreaker","A denim vest"],a:0},
+{cat:"Fads & Fashion",d:2,q:"The brand Rollerblade turned which activity into an early-90s craze?",c:["Skateboarding","Snowboarding","Inline skating"],a:2},
+{cat:"Fads & Fashion",d:2,q:"The Reebok Pump sneaker, released in 1989, let wearers do what?",c:["Inflate the shoe for a snug fit","Light up the soles with each step","Swap out colored side panels"],a:0},
+{cat:"Fads & Fashion",d:2,q:"Lisa Frank ruled early-90s school supplies with what signature style?",c:["Glow-in-the-dark skulls","Neon rainbow animals like unicorns and dolphins","Black-and-white checkerboards"],a:1},
+{cat:"Fads & Fashion",d:2,q:"What was the name of the diner hangout on Saved by the Bell?",c:["The Peach Pit","Central Perk","The Max"],a:2},
+{cat:"Fads & Fashion",d:2,q:"MC Hammer's \"U Can't Touch This\" (1990) built its hook from which Rick James song?",c:["Super Freak","Brick House","Word Up"],a:0},
+{cat:"Fads & Fashion",d:2,q:"What piece of tech did Zack Morris famously carry on Saved by the Bell?",c:["A pocket pager","A Walkman","A giant brick cell phone"],a:2},
+{cat:"Fads & Fashion",d:2,q:"What did the mid-90s phrase \"Talk to the hand\" mean?",c:["I'm not listening to you","Give me a high five","Let's shake on it"],a:0},
+{cat:"Fads & Fashion",d:2,q:"Right Said Fred strutted like models in which cheeky 1991 hit?",c:["Unbelievable","I'm Too Sexy","Ice Ice Baby"],a:1},
+{cat:"Fads & Fashion",d:3,q:"In the original British books, Waldo is known by what name?",c:["Wally","Wilbur","Walter"],a:0},
+{cat:"Fads & Fashion",d:3,q:"POG milk caps got their name from a Hawaiian juice made of which flavors?",c:["Pineapple, orange, grapefruit","Papaya, orange, grape","Passion fruit, orange, guava"],a:2},
+{cat:"Fads & Fashion",d:3,q:"What was the long curved late-80s hair accessory that fanned a ponytail down the back of the head?",c:["The scrunchie","The banana clip","The claw clip"],a:1},
+{cat:"Fads & Fashion",d:3,q:"Which Seattle apparel company made Hypercolor color-change shirts?",c:["Ocean Pacific","Generra","Union Bay"],a:1},
+{cat:"Fads & Fashion",d:3,q:"Why was Milli Vanilli's Grammy revoked in 1990?",c:["They hadn't sung on their own album","They plagiarized another band's song","They skipped the ceremony"],a:0},
+{cat:"Fads & Fashion",d:3,q:"Which mushroom-cloud-headed character is the most famous Garbage Pail Kid?",c:["Leaky Lindsay","Nasty Nick","Adam Bomb"],a:2},
+{cat:"Fads & Fashion",d:3,q:"Treasure Trolls, a hot 1992 toy line, differed from ordinary Troll dolls by having what?",c:["A jewel in the belly","Glow-in-the-dark hair","Battery-powered eyes"],a:0},
+{cat:"Fads & Fashion",d:3,q:"What was the common term for folding and rolling your jean cuffs skin-tight around the ankle?",c:["Cuff-stacking","Tight-rolling","Hem-tucking"],a:1},
+{cat:"Fads & Fashion",d:3,q:"The Lambada, the 1989 Brazilian dance craze, was marketed under what nickname?",c:["The devil's tango","The midnight dance","The forbidden dance"],a:2},
+{cat:"Fads & Fashion",d:3,q:"\"Homey don't play that,\" said by Homey D. Clown, came from which sketch show?",c:["Saturday Night Live","Martin","In Living Color"],a:2},
+{cat:"Fads & Fashion",d:3,q:"Which sitcom star pitched the ThighMaster in ubiquitous 1991 infomercials?",c:["Suzanne Somers","Jane Fonda","Markie Post"],a:0},
+{cat:"Fads & Fashion",d:3,q:"Ecto Cooler, the green Slimer-branded drink launched in 1987, was a flavor of what?",c:["Kool-Aid","Hi-C","Capri Sun"],a:1},
+{cat:"Fads & Fashion",d:3,q:"Baseball caps with a big \"X\" were everywhere in 1992, promoting what?",c:["Spike Lee's film Malcolm X","The X-Files TV show","Generation X, the novel"],a:0},
+{cat:"Fads & Fashion",d:3,q:"In 1992, rapper Marky Mark became the famous billboard face of what?",c:["Guess jeans","Reebok Pumps","Calvin Klein underwear"],a:2},
+{cat:"Fads & Fashion",d:3,q:"Grunge-era Dr. Martens boots are trademarked by stitching of which color?",c:["Red","Yellow","White"],a:1},
+{cat:"Fads & Fashion",d:3,q:"The Talkboy cassette recorder became a hit toy after appearing in which 1992 movie?",c:["Jurassic Park","Home Alone 2: Lost in New York","3 Ninjas"],a:1},
+{cat:"Fads & Fashion",d:3,q:"Electric Youth, the hit 1989 teen perfume, was branded by which pop star?",c:["Tiffany","Paula Abdul","Debbie Gibson"],a:2},
+{cat:"Fads & Fashion",d:3,q:"Which company launched Beanie Babies in 1993?",c:["Ty Inc.","Mattel","Hasbro"],a:0},
+{cat:"Fads & Fashion",d:3,q:"Kids everywhere sang \"Be Like Mike\" in 1992 thanks to whose ad campaign?",c:["Nike","McDonald's","Gatorade"],a:2},
+{cat:"Fads & Fashion",d:3,q:"In 1985 the NBA fined Michael Jordan $5,000 a game for wearing what?",c:["Black-and-red Air Jordan sneakers","A gold chain on the court","Unlicensed knee-length shorts"],a:0},
+{cat:"Fads & Fashion",d:3,q:"The Koosh Ball, a 1988 sensation, was a ball made of what?",c:["Memory foam","Thousands of soft rubber filaments","Inflatable mesh"],a:1},
+{cat:"Fads & Fashion",d:4,q:"Which Boston Celtic pumped up his Reebok Pumps before winning the 1991 NBA dunk contest?",c:["Dee Brown","Shawn Kemp","Spud Webb"],a:0},
+{cat:"Fads & Fashion",d:4,q:"What was the brand name of the original slap bracelet, invented by a Wisconsin teacher?",c:["Snap Strap","Wrist Whip","Slap Wrap"],a:2},
+{cat:"Fads & Fashion",d:4,q:"What common laundry mistake permanently killed a Hypercolor shirt's color change?",c:["Washing in cold water","Ironing it or using a hot dryer","Using powdered detergent"],a:1},
+{cat:"Fads & Fashion",d:4,q:"Which organization licensed the milk-cap game and drove POGs to national fame in the 90s?",c:["The United Milk Cap League","The World POG Federation","The American Slammer Association"],a:1},
+{cat:"Fads & Fashion",d:4,q:"Who created Where's Waldo, first published in the US in 1987?",c:["Martin Handford","Quentin Blake","Graeme Base"],a:0},
+{cat:"Fads & Fashion",d:4,q:"What is the name of Waldo's yellow-and-black-striped nemesis?",c:["Wizard Whitebeard","Wenda","Odlaw"],a:2},
+{cat:"Fads & Fashion",d:4,q:"The Garbage Pail Kids fad produced what notorious 1987 box-office bomb?",c:["A live-action Garbage Pail Kids movie","A Garbage Pail Kids Broadway musical","A Garbage Pail Kids arena ice show"],a:0},
+{cat:"Fads & Fashion",d:4,q:"Which Bart Simpson T-shirt slogan got him banned from some schools in 1990?",c:["Class Clown and Proud of It","Underachiever and Proud of It, Man","Homework Is for Dorks"],a:1},
+{cat:"Fads & Fashion",d:4,q:"Before stardom, Jennifer Lopez danced as a \"Fly Girl\" on which show?",c:["Soul Train","MADtv","In Living Color"],a:2},
+{cat:"Fads & Fashion",d:4,q:"The Super Soaker (1990) was invented by Lonnie Johnson, an engineer who had worked where?",c:["Ford Motor Company","Boeing","NASA's Jet Propulsion Laboratory"],a:2},
+{cat:"Fads & Fashion",d:4,q:"What thrift-store garment did Kurt Cobain wear during Nirvana's 1993 MTV Unplugged taping?",c:["A fuzzy olive-green cardigan","A red flannel shirt","A leather motorcycle jacket"],a:0},
+{cat:"Fads & Fashion",d:4,q:"Cross Colours, huge in the early 90s, was known for what look?",c:["All-black minimalist suits","Brightly color-blocked hip-hop streetwear","Pastel preppy polos"],a:1},
+{cat:"Fads & Fashion",d:4,q:"Winners on Nickelodeon GUTS (1992) ended each episode by scaling what?",c:["The Aggro Crag","The Silver Summit","Mount Slime"],a:0},
+{cat:"Fads & Fashion",d:4,q:"In 90s pager code, what did \"143\" mean?",c:["Call me back","Where are you?","I love you"],a:2},
+{cat:"Fads & Fashion",d:4,q:"What is the technical name for the hidden-image pictures in Magic Eye books (1993)?",c:["Holograms","Autostereograms","Anamorphic prints"],a:1},
+{cat:"Fads & Fashion",d:4,q:"Wendy the Snapple Lady, star of 90s Snapple ads, got the job doing what at the company?",c:["Driving a delivery truck","Answering fan letters","Inventing new flavors"],a:1},
+{cat:"Fads & Fashion",d:4,q:"Crystal Pepsi's 1993 Super Bowl ad blasted which hit song?",c:["Extreme's More Than Words","U2's Mysterious Ways","Van Halen's Right Now"],a:2},
+{cat:"Fads & Fashion",d:4,q:"Who sang \"You got the right one, baby, uh-huh\" in the inescapable 1991 Diet Pepsi ads?",c:["Ray Charles","Stevie Wonder","James Brown"],a:0},
+{cat:"Fads & Fashion",d:4,q:"Ren & Stimpy's fake commercials pitched what beloved all-purpose toy from Blammo?",c:["Rubber Nickels","The Sticky Stick","Log"],a:2},
+{cat:"Fads & Fashion",d:4,q:"Whose 1991 novel popularized the term \"Generation X\"?",c:["Douglas Coupland","Bret Easton Ellis","Jay McInerney"],a:0},
+{cat:"Fads & Fashion",d:4,q:"Jams, the mid-80s shorts fad from Surf Line Hawaii, were known for what?",c:["Built-in fanny packs","Loud knee-length Hawaiian prints","Zip-off legs"],a:1},
+{cat:"Fads & Fashion",d:5,q:"Which hairstylist created the \"Rachel\" cut on Jennifer Aniston in 1994?",c:["Chris McMillan","Jose Eber","Frederic Fekkai"],a:0},
+{cat:"Fads & Fashion",d:5,q:"Marc Jacobs was let go after designing his famous 1992 grunge collection for which label?",c:["Calvin Klein","Donna Karan","Perry Ellis"],a:2},
+{cat:"Fads & Fashion",d:5,q:"In the 1992 New York Times \"grunge speak\" hoax, which fake term meant hanging out?",c:["Cob nobbler","Swingin' on the flippity-flop","Harsh realm"],a:1},
+{cat:"Fads & Fashion",d:5,q:"Blossom Galbiso, who sparked Hawaii's 1991 milk-cap revival that became POGs, was a what?",c:["Dairy company executive","Elementary school teacher","Radio DJ"],a:1},
+{cat:"Fads & Fashion",d:5,q:"Which Garbage Pail Kids co-creator later won a Pulitzer Prize for the graphic novel Maus?",c:["Art Spiegelman","Matt Groening","Gary Panter"],a:0},
+{cat:"Fads & Fashion",d:5,q:"Which act's 1994 song \"Mullet Head\" is credited with popularizing the haircut's name?",c:["Red Hot Chili Peppers","Green Day","Beastie Boys"],a:2},
+{cat:"Fads & Fashion",d:5,q:"Who directed the first \"Got Milk?\" commercial, 1993's famous \"Aaron Burr\" spot?",c:["Michael Bay","Spike Jonze","David Fincher"],a:0},
+{cat:"Fads & Fashion",d:5,q:"What was the ad slogan for Zima, the clear malt beverage launched in 1993?",c:["Clearly different","Zomething different","Za za zoom"],a:1},
+{cat:"Fads & Fashion",d:5,q:"OK Soda, the gloomy Gen X-marketed drink tested in 1993 and axed by 1995, was made by whom?",c:["PepsiCo","Snapple","Coca-Cola"],a:2},
+{cat:"Fads & Fashion",d:5,q:"Who spray-painted \"Kurt Smells Like Teen Spirit\" on Cobain's wall, referencing a deodorant brand?",c:["Courtney Love","Kim Gordon","Kathleen Hanna"],a:2},
+{cat:"Fads & Fashion",d:5,q:"In Clueless slang (1995), what did Cher call a good-looking guy?",c:["A Baldwin","A Keanu","A Cruise"],a:0},
+{cat:"Fads & Fashion",d:5,q:"In Clueless (1995), calling someone \"a full-on Monet\" meant what?",c:["A total fashion icon","Fine from far away, a mess up close","An obvious copycat"],a:1},
+{cat:"Fads & Fashion",d:5,q:"Tag Team's \"Whoomp!\" had a rival 1993 hit, \"Whoot, There It Is,\" by which group?",c:["95 South","69 Boyz","Quad City DJ's"],a:0},
+{cat:"Fads & Fashion",d:5,q:"Which supermodel quipped in 1990, \"We don't wake up for less than $10,000 a day\"?",c:["Naomi Campbell","Cindy Crawford","Linda Evangelista"],a:2},
+{cat:"Fads & Fashion",d:5,q:"George Michael's \"Freedom! '90\" video famously featured whom lip-syncing in his place?",c:["MTV VJs","Supermodels like Evangelista and Campbell","Drag queens from Harlem balls"],a:1},
+{cat:"Fads & Fashion",d:5,q:"Which pop artist designed a coveted line of Swatch watches in the mid-1980s?",c:["Andy Warhol","Keith Haring","Jean-Michel Basquiat"],a:1},
+{cat:"Fads & Fashion",d:5,q:"How many Beanie Babies made up Ty's original 1993 launch lineup?",c:["Five","Twelve","Nine"],a:2},
+{cat:"Fads & Fashion",d:5,q:"Which mall fashion giant, parent of Chess King, filed for bankruptcy in 1994?",c:["Merry-Go-Round","County Seat","Units"],a:0},
+{cat:"Fads & Fashion",d:5,q:"Courtney Love's ripped babydoll-dress-and-tiara style of the early 90s was tagged with what name?",c:["Grunge gothic","Riot glam","Kinderwhore"],a:2},
+{cat:"Fads & Fashion",d:5,q:"What was the slogan of hip-hop fashion brand Cross Colours?",c:["Clothing Without Prejudice","Colors for the Culture","One World, One Wardrobe"],a:0},
+{cat:"Fads & Fashion",d:5,q:"What was Club MTV host Downtown Julie Brown's signature catchphrase?",c:["Boom shaka-laka","Wubba wubba wubba","Cha-cha-cha, baby"],a:1}
+);
+
+/* ═══════════════════════════════════════════════════════════
+   RETROPARDY! — game engine
+   Two rounds of 6×5 clues + a Final wager round.
+   Questions come from window.RETRO_BANK (js/data/*.js).
+   Question history persists in localStorage so replays draw
+   fresh material until the pool runs dry.
+   ═══════════════════════════════════════════════════════════ */
+(function () {
+"use strict";
+
+/* ── category flavor ────────────────────────────────────── */
+var CAT_META = {
+  "Movies":         { title: "AT THE MOVIES",    sub: "Movies" },
+  "Television":     { title: "TUBE TIME",        sub: "Television" },
+  "Music":          { title: "MIXTAPE",          sub: "Music" },
+  "Video Games":    { title: "HIGH SCORES",      sub: "Video Games" },
+  "Sports":         { title: "SPORTS PAGE",      sub: "Sports" },
+  "World Events":   { title: "HEADLINES",        sub: "World Events" },
+  "Food & Drink":   { title: "DRIVE-THRU",       sub: "Food & Drink" },
+  "Cars":           { title: "HORSEPOWER",       sub: "Cars" },
+  "Tech & Toys":    { title: "GADGETS & GIZMOS", sub: "Tech & Toys" },
+  "Fads & Fashion": { title: "TOTALLY RAD",      sub: "Fads & Fashion" }
+};
+
+var FUN_FACTS = [
+  "In 1985 a top-loading NES cost $89.99 and came with R.O.B. the robot.",
+  "Blockbuster opened its first store in Dallas in October 1985.",
+  "The final brick of the Berlin Wall era fell just weeks after 'Girl You Know It's True' went platinum. Coincidence?",
+  "A 1989 Game Boy ran about 30 hours on 4 AA batteries. Your phone wishes.",
+  "MTV still played music videos for most of this game's era. Really.",
+  "In 1995, a 28.8k modem was considered blazing fast.",
+  "Crystal Pepsi lasted about a year. This game will last longer.",
+  "The Macarena hit the US in 1995 — technically eligible, unfortunately.",
+  "Thanks for playing. Be kind, rewind."
+];
+
+var ROUND_VALUES = { 1: [200, 400, 600, 800, 1000], 2: [400, 800, 1200, 1600, 2000] };
+var TIMER_SECONDS = 20;
+var SEEN_KEY = "retropardy_seen_v1";
+var MUTE_KEY = "retropardy_mute_v1";
+
+/* ── question bank ──────────────────────────────────────── */
+var BANK = (window.RETRO_BANK || []).filter(function (q) {
+  return q && q.q && q.c && q.c.length === 3 && q.a >= 0 && q.a <= 2 && CAT_META[q.cat];
+});
+
+function qid(q) { // stable id: djb2 hash of the question text
+  var h = 5381, s = q.q;
+  for (var i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
+
+var byCatDiff = {}; // cat -> diff -> [q]
+BANK.forEach(function (q) {
+  q.id = qid(q);
+  (byCatDiff[q.cat] = byCatDiff[q.cat] || {})[q.d] = (byCatDiff[q.cat][q.d] || []).concat([q]);
+});
+
+var seen = loadSeen();
+function loadSeen() {
+  try { return new Set(JSON.parse(localStorage.getItem(SEEN_KEY) || "[]")); }
+  catch (e) { return new Set(); }
+}
+function saveSeen() {
+  try { localStorage.setItem(SEEN_KEY, JSON.stringify(Array.from(seen))); } catch (e) {}
+}
+
+/* ── audio: tiny synth, no assets ───────────────────────── */
+var muted = false;
+try { muted = localStorage.getItem(MUTE_KEY) === "1"; } catch (e) {}
+var actx = null;
+function ac() {
+  if (!actx) {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) actx = new AC();
+  }
+  if (actx && actx.state === "suspended") actx.resume();
+  return actx;
+}
+function tone(freq, t0, dur, type, gain) {
+  var ctx = ac(); if (!ctx || muted) return;
+  var o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = type || "square"; o.frequency.value = freq;
+  var at = ctx.currentTime + (t0 || 0);
+  g.gain.setValueAtTime(0.0001, at);
+  g.gain.exponentialRampToValueAtTime(gain || 0.08, at + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+  o.connect(g); g.connect(ctx.destination);
+  o.start(at); o.stop(at + dur + 0.05);
+}
+var sfx = {
+  pick:    function () { tone(660, 0, 0.09, "square", 0.05); },
+  reveal:  function () { tone(392, 0, 0.1, "triangle", 0.06); tone(523, 0.07, 0.12, "triangle", 0.06); },
+  correct: function () { [523, 659, 784, 1047].forEach(function (f, i) { tone(f, i * 0.09, 0.16, "triangle", 0.09); }); },
+  wrong:   function () { tone(196, 0, 0.28, "sawtooth", 0.07); tone(147, 0.22, 0.42, "sawtooth", 0.07); },
+  dd:      function () { [330, 440, 554, 660, 880].forEach(function (f, i) { tone(f, i * 0.07, 0.14, "square", 0.07); }); },
+  tick:    function () { tone(880, 0, 0.03, "square", 0.02); },
+  fanfare: function () { [523, 523, 523, 659, 784, 1047].forEach(function (f, i) { tone(f, i * 0.12, 0.2, "triangle", 0.1); }); }
+};
+
+/* ── state ──────────────────────────────────────────────── */
+var S = {
+  nPlayers: 1,
+  players: [],           // {name, score, wager, finalDone}
+  control: 0,            // index of player in control
+  round: 1,
+  cells: [],             // 30 cell objects: {q, value, dd, used}
+  cats: [],              // 6 cat keys for this round
+  remaining: 0,
+  gameUsed: new Set(),   // question ids used this game
+  current: null,         // active cell
+  timerId: null,
+  finalQ: null,
+  finalPhase: 0          // index of player wagering / answering
+};
+
+/* ── dom helpers ────────────────────────────────────────── */
+function $(id) { return document.getElementById(id); }
+function show(id) { $(id).classList.remove("hidden"); }
+function hide(id) { $(id).classList.add("hidden"); }
+function money(n) { return (n < 0 ? "-$" : "$") + Math.abs(n).toLocaleString(); }
+function shuffle(arr) {
+  for (var i = arr.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1)), t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+  }
+  return arr;
+}
+
+/* ── question picking ───────────────────────────────────── */
+function pickQuestion(cat, d) {
+  var pool = (byCatDiff[cat] && byCatDiff[cat][d]) || [];
+  var fresh = pool.filter(function (q) { return !seen.has(q.id) && !S.gameUsed.has(q.id); });
+  if (!fresh.length) fresh = pool.filter(function (q) { return !S.gameUsed.has(q.id); });
+  if (!fresh.length) fresh = pool;
+  if (!fresh.length) return null;
+  var q = fresh[Math.floor(Math.random() * fresh.length)];
+  S.gameUsed.add(q.id);
+  return q;
+}
+
+function catsWithFreshCount() {
+  return Object.keys(byCatDiff).map(function (cat) {
+    var fresh = 0;
+    for (var d = 1; d <= 5; d++) {
+      ((byCatDiff[cat][d]) || []).forEach(function (q) { if (!seen.has(q.id)) fresh++; });
+    }
+    return { cat: cat, fresh: fresh };
+  });
+}
+
+function pickCats(exclude) {
+  // favor categories with the most unseen material; light shuffle for variety
+  var all = catsWithFreshCount();
+  var scored = all.filter(function (c) { return exclude.indexOf(c.cat) === -1; });
+  shuffle(scored);
+  scored.sort(function (a, b) { return b.fresh - a.fresh; });
+  var top = scored.slice(0, 8);
+  shuffle(top);
+  var picked = top.slice(0, 6).map(function (c) { return c.cat; });
+  if (picked.length < 6) { // not enough unused categories — repeat some from last round
+    var fill = shuffle(all.filter(function (c) { return picked.indexOf(c.cat) === -1; }));
+    while (picked.length < 6 && fill.length) picked.push(fill.shift().cat);
+  }
+  return picked;
+}
+
+/* ── board ──────────────────────────────────────────────── */
+function buildRound(round) {
+  S.round = round;
+  S.cats = pickCats(round === 2 ? S.cats : []);
+  S.cells = [];
+  var values = ROUND_VALUES[round];
+  S.cats.forEach(function (cat, ci) {
+    values.forEach(function (v, ri) {
+      S.cells.push({ cat: cat, q: pickQuestion(cat, ri + 1), value: v, dd: false, used: false, ci: ci, ri: ri });
+    });
+  });
+  // daily doubles: 1 in round one, 2 in round two — never on the top row
+  var eligible = S.cells.filter(function (c) { return c.ri > 0 && c.q; });
+  shuffle(eligible).slice(0, round === 1 ? 1 : 2).forEach(function (c) { c.dd = true; });
+  S.remaining = S.cells.filter(function (c) { return c.q; }).length;
+  renderBoard();
+  $("round-label").textContent = round === 1 ? "ROUND 1" : "DOUBLE ROUND";
+  sfx.reveal();
+}
+
+function renderBoard() {
+  var board = $("board");
+  board.innerHTML = "";
+  S.cats.forEach(function (cat) {
+    var meta = CAT_META[cat];
+    var el = document.createElement("div");
+    el.className = "cat-cell";
+    el.innerHTML = '<div class="cat-title">' + meta.title + '</div><div class="cat-sub">' + meta.sub + "</div>";
+    board.appendChild(el);
+  });
+  for (var ri = 0; ri < 5; ri++) {
+    for (var ci = 0; ci < 6; ci++) {
+      (function (cell) {
+        var b = document.createElement("button");
+        b.className = "val-cell";
+        if (!cell.q || cell.used) {
+          b.classList.add("used");
+          b.disabled = true;
+          b.textContent = "$" + cell.value;
+        } else {
+          b.textContent = "$" + cell.value;
+          b.addEventListener("click", function () { openClue(cell, b); });
+        }
+        board.appendChild(b);
+      })(S.cells[ci * 5 + ri]);
+    }
+  }
+  renderScores("scorebar");
+}
+
+function renderScores(elId) {
+  var bar = $(elId);
+  bar.innerHTML = "";
+  S.players.forEach(function (p, i) {
+    var d = document.createElement("div");
+    d.className = "podium-card" + (i === S.control && S.nPlayers > 1 ? " active" : "");
+    d.innerHTML = '<div class="podium-name">' + p.name + '</div>' +
+                  '<div class="podium-score' + (p.score < 0 ? " neg" : "") + '">' + money(p.score) + "</div>";
+    bar.appendChild(d);
+  });
+}
+
+/* ── clue flow ──────────────────────────────────────────── */
+function openClue(cell, btn) {
+  sfx.pick();
+  S.current = cell;
+  cell.used = true;
+  btn.classList.add("used");
+  btn.disabled = true;
+  seen.add(cell.q.id); saveSeen();
+
+  var value = cell.dd ? cell.value * 2 : cell.value;
+  $("clue-cat").textContent = CAT_META[cell.cat].title;
+  $("clue-value").textContent = money(value);
+  $("clue-player").textContent = S.nPlayers > 1 ? S.players[S.control].name + " HAS THE BOARD" : "";
+  $("clue-q").textContent = cell.q.q;
+  hide("verdict");
+  $("timer").style.visibility = "visible";
+
+  if (cell.dd) { show("dd-flash"); sfx.dd(); } else { hide("dd-flash"); }
+
+  renderAnswers(cell.q, value, function (okay, pickedIdx, timedOut) {
+    resolveClue(cell, value, okay, timedOut);
+  });
+  show("clue");
+  startTimer(function () { finishAnswer(null, true); });
+}
+
+var finishAnswer = function () {}; // rebound per clue
+
+function renderAnswers(q, value, done) {
+  var wrap = $("clue-answers");
+  wrap.innerHTML = "";
+  var order = shuffle([0, 1, 2]);
+  var buttons = [];
+  var settled = false;
+
+  finishAnswer = function (pickedIdx, timedOut) {
+    if (settled) return;
+    settled = true;
+    stopTimer();
+    var okay = pickedIdx !== null && order[pickedIdx] === q.a;
+    buttons.forEach(function (b, i) {
+      b.disabled = true;
+      if (order[i] === q.a) b.classList.add("reveal-good");
+      else if (i === pickedIdx) b.classList.add("reveal-bad");
+      else b.classList.add("dim");
+    });
+    done(okay, pickedIdx, !!timedOut);
+  };
+
+  order.forEach(function (srcIdx, i) {
+    var b = document.createElement("button");
+    b.className = "ans-btn";
+    b.innerHTML = '<span class="ans-key">' + (i + 1) + "</span><span>" + escapeHtml(q.c[srcIdx]) + "</span>";
+    b.addEventListener("click", function () { finishAnswer(i, false); });
+    wrap.appendChild(b);
+    buttons.push(b);
+  });
+}
+
+function resolveClue(cell, value, okay, timedOut) {
+  var p = S.players[S.control];
+  var vt = $("verdict-text");
+  if (okay) {
+    p.score += value;
+    vt.textContent = pick(["RIGHT ON!", "TUBULAR!", "MOST EXCELLENT!", "BODACIOUS!", "NO DOUBT!"]) + "  +" + money(value).slice(1);
+    vt.className = "good";
+    sfx.correct();
+  } else if (timedOut) {
+    vt.textContent = "TIME'S UP!";
+    vt.className = "bad";
+    sfx.wrong();
+    if (S.nPlayers > 1) S.control = (S.control + 1) % S.nPlayers;
+  } else {
+    p.score -= value;
+    vt.textContent = pick(["BOGUS!", "NOT EVEN!", "AS IF!", "GNARLY MISS!"]) + "  -" + money(value).slice(1);
+    vt.className = "bad";
+    sfx.wrong();
+    if (S.nPlayers > 1) S.control = (S.control + 1) % S.nPlayers;
+  }
+  $("timer").style.visibility = "hidden";
+  show("verdict");
+  $("continue-btn").focus();
+}
+
+function closeClue() {
+  hide("clue");
+  S.remaining--;
+  renderBoard();
+  if (S.remaining <= 0) {
+    if (S.round === 1) buildRound(2);
+    else startFinal();
+  }
+}
+
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function escapeHtml(s) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/* ── timer ──────────────────────────────────────────────── */
+function startTimer(onExpire) {
+  stopTimer();
+  var fill = $("timer-fill");
+  var start = Date.now(), total = TIMER_SECONDS * 1000, lastTick = 0;
+  fill.style.width = "100%";
+  S.timerId = setInterval(function () {
+    var left = total - (Date.now() - start);
+    if (left <= 0) { stopTimer(); fill.style.width = "0%"; onExpire(); return; }
+    fill.style.width = (left / total * 100) + "%";
+    if (left < 5200) { // audible countdown in the last five seconds
+      var sec = Math.ceil(left / 1000);
+      if (sec !== lastTick) { lastTick = sec; sfx.tick(); }
+    }
+  }, 80);
+}
+function stopTimer() { if (S.timerId) { clearInterval(S.timerId); S.timerId = null; } }
+
+/* ── final round ────────────────────────────────────────── */
+function startFinal() {
+  // hardest unseen question from the category with the most fresh material
+  var cats = shuffle(Object.keys(byCatDiff));
+  S.finalQ = null;
+  for (var i = 0; i < cats.length && !S.finalQ; i++) S.finalQ = pickQuestion(cats[i], 5);
+  if (!S.finalQ) { endGame(); return; }
+  seen.add(S.finalQ.id); saveSeen();
+  S.finalPhase = 0;
+  S.players.forEach(function (p) { p.wager = 0; p.finalDone = false; });
+  askWager();
+}
+
+function askWager() {
+  var p = S.players[S.finalPhase];
+  var max = Math.max(p.score, 1000);
+  $("wager-cat").textContent = "CATEGORY: " + CAT_META[S.finalQ.cat].title;
+  $("wager-player").textContent = p.name + " — SET YOUR WAGER";
+  var slider = $("wager-slider");
+  slider.max = max;
+  slider.step = 100;
+  slider.value = Math.min(Math.max(Math.round(max / 2 / 100) * 100, 0), max);
+  $("wager-amt").textContent = money(+slider.value);
+  hide("game"); show("wager");
+}
+
+function lockWager() {
+  S.players[S.finalPhase].wager = +$("wager-slider").value;
+  sfx.pick();
+  S.finalPhase++;
+  if (S.finalPhase < S.nPlayers) { askWager(); return; }
+  hide("wager");
+  S.finalPhase = 0;
+  askFinalAnswer();
+}
+
+function askFinalAnswer() {
+  var p = S.players[S.finalPhase];
+  $("clue-cat").textContent = "FINAL: " + CAT_META[S.finalQ.cat].title;
+  $("clue-value").textContent = "WAGER " + money(p.wager);
+  $("clue-player").textContent = S.nPlayers > 1 ? p.name + " ANSWERS" : "";
+  $("clue-q").textContent = S.finalQ.q;
+  hide("dd-flash"); hide("verdict");
+  $("timer").style.visibility = "visible";
+
+  renderAnswers(S.finalQ, p.wager, function (okay) {
+    p.score += okay ? p.wager : -p.wager;
+    var vt = $("verdict-text");
+    vt.textContent = okay ? "CORRECT!  +" + money(p.wager).slice(1) : "WRONG!  -" + money(p.wager).slice(1);
+    vt.className = okay ? "good" : "bad";
+    if (okay) sfx.correct(); else sfx.wrong();
+    $("timer").style.visibility = "hidden";
+    show("verdict");
+  });
+  show("clue");
+  startTimer(function () { finishAnswer(null, true); });
+}
+
+function continueFromVerdict() {
+  if (S.finalQ) {
+    hide("clue");
+    S.finalPhase++;
+    if (S.finalPhase < S.nPlayers) askFinalAnswer();
+    else endGame();
+  } else {
+    closeClue();
+  }
+}
+
+function endGame() {
+  hide("clue"); hide("game"); hide("wager");
+  var podium = $("podium");
+  podium.innerHTML = "";
+  var best = Math.max.apply(null, S.players.map(function (p) { return p.score; }));
+  S.players.forEach(function (p) {
+    var d = document.createElement("div");
+    d.className = "podium-card" + (p.score === best ? " winner" : "");
+    d.innerHTML = '<div class="podium-name">' + p.name + '</div>' +
+                  '<div class="podium-score' + (p.score < 0 ? " neg" : "") + '">' + money(p.score) + "</div>";
+    podium.appendChild(d);
+  });
+  $("fun-fact").textContent = pick(FUN_FACTS);
+  show("results");
+  sfx.fanfare();
+}
+
+/* ── game setup ─────────────────────────────────────────── */
+function newGame() {
+  var names = ["PLAYER ONE", "PLAYER TWO", "PLAYER THREE"];
+  S.players = [];
+  for (var i = 0; i < S.nPlayers; i++) S.players.push({ name: names[i], score: 0, wager: 0 });
+  S.control = 0;
+  S.gameUsed = new Set();
+  S.finalQ = null;
+  hide("splash"); hide("results"); show("game");
+  buildRound(1);
+}
+
+/* ── wiring ─────────────────────────────────────────────── */
+document.addEventListener("DOMContentLoaded", function () {
+  var unseenCount = BANK.filter(function (q) { return !seen.has(q.id); }).length;
+  $("bank-count").textContent = BANK.length.toLocaleString() + " questions loaded · " + unseenCount.toLocaleString() + " you haven't seen";
+
+  Array.prototype.forEach.call(document.querySelectorAll(".pick-btn"), function (b) {
+    b.addEventListener("click", function () {
+      document.querySelectorAll(".pick-btn").forEach(function (x) { x.classList.remove("selected"); });
+      b.classList.add("selected");
+      S.nPlayers = +b.dataset.n;
+      sfx.pick();
+    });
+  });
+
+  $("start-btn").addEventListener("click", function () { ac(); sfx.reveal(); newGame(); });
+  $("again-btn").addEventListener("click", function () { newGame(); });
+  $("continue-btn").addEventListener("click", continueFromVerdict);
+  $("wager-btn").addEventListener("click", lockWager);
+  $("wager-slider").addEventListener("input", function () { $("wager-amt").textContent = money(+this.value); });
+
+  $("reset-seen").addEventListener("click", function () {
+    seen = new Set(); saveSeen();
+    $("bank-count").textContent = BANK.length.toLocaleString() + " questions loaded · all fresh again";
+  });
+
+  var muteBtn = $("mute-btn");
+  function paintMute() { muteBtn.textContent = muted ? "🔇" : "🔊"; }
+  paintMute();
+  muteBtn.addEventListener("click", function () {
+    muted = !muted;
+    try { localStorage.setItem(MUTE_KEY, muted ? "1" : "0"); } catch (e) {}
+    paintMute();
+  });
+
+  // keys 1/2/3 answer, Enter continues
+  document.addEventListener("keydown", function (e) {
+    if (!$("clue").classList.contains("hidden")) {
+      if (e.key >= "1" && e.key <= "3" && $("verdict").classList.contains("hidden")) {
+        finishAnswer(+e.key - 1, false);
+      } else if (e.key === "Enter" && !$("verdict").classList.contains("hidden")) {
+        continueFromVerdict();
+      }
+    }
+  });
+});
+
+})();
+
+// Inline bundle: if the DOM is already parsed when this runs, fire init manually.
+if (document.readyState !== "loading") {
+  document.dispatchEvent(new Event("DOMContentLoaded"));
+}
+</script>
+</body>
+</html>
