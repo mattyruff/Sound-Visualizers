@@ -4,7 +4,7 @@
   "description": "A Jeopardy-style trivia game covering 1985-1995. 1000+ questions, fully offline.",
   "start_url": "./index.html",
   "scope": "./",
-  "display": "fullscreen",
+  "display": "standalone",
   "orientation": "any",
   "background_color": "#04053a",
   "theme_color": "#060ce9",
