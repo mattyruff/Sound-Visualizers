@@ -307,7 +307,17 @@ function resolveClue(cell, value, okay, timedOut) {
   }
   $("timer").style.visibility = "hidden";
   show("verdict");
-  $("continue-btn").focus();
+  revealContinue();
+}
+
+function revealContinue() {
+  var b = $("continue-btn");
+  function bring() { b.scrollIntoView({ block: "nearest" }); }
+  requestAnimationFrame(function () {
+    b.focus({ preventScroll: true });
+    bring();
+    setTimeout(bring, 300); // again once any pending layout/animation settles
+  });
 }
 
 function closeClue() {
@@ -396,6 +406,7 @@ function askFinalAnswer() {
     if (okay) sfx.correct(); else sfx.wrong();
     $("timer").style.visibility = "hidden";
     show("verdict");
+    revealContinue();
   });
   show("clue");
   startTimer(function () { finishAnswer(null, true); });

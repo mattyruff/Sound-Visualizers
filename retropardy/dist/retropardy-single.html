@@ -232,12 +232,18 @@ body {
 #clue, #wager {
   position: fixed; inset: 0; z-index: 50;
   background: radial-gradient(130% 130% at 50% 0%, #1219e0 0%, var(--blue-clue) 45%, #04053f 100%);
-  display: flex; align-items: center; justify-content: center;
+  display: flex; align-items: flex-start; justify-content: center;
+  overflow-y: auto;                          /* long clues must scroll, never clip */
+  -webkit-overflow-scrolling: touch;
   animation: clue-in .22s ease-out;
 }
 @keyframes clue-in { from { transform: scale(.35); opacity: .2; } to { transform: scale(1); opacity: 1; } }
 
-.clue-inner { width: min(920px, 94vw); text-align: center; padding: 24px; }
+.clue-inner {
+  width: min(920px, 94vw); text-align: center;
+  margin: auto;                              /* centers when short, scrolls when tall */
+  padding: 24px 24px calc(24px + env(safe-area-inset-bottom));
+}
 
 .clue-head {
   display: flex; justify-content: space-between; align-items: baseline;
@@ -336,7 +342,14 @@ body {
   .val-cell { font-size: clamp(15px, 5.4vw, 30px); }
   .podium-card { min-width: 100px; padding: 6px 10px 8px; }
   .podium-score { font-size: 22px; }
-  .clue-head { flex-direction: column; gap: 4px; align-items: center; }
+  .clue-head { flex-direction: column; gap: 4px; align-items: center; margin-bottom: 14px; }
+  .clue-inner { padding-top: 14px; }
+  #clue-q { min-height: 0; margin-bottom: 16px; }
+  #clue-answers { gap: 9px; }
+  .ans-btn { padding: 11px 13px; gap: 10px; }
+  #timer { margin-top: 14px; }
+  #verdict { margin-top: 12px; }
+  #dd-flash { margin-bottom: 8px; }
 }
 
 </style>
@@ -1825,7 +1838,17 @@ function resolveClue(cell, value, okay, timedOut) {
   }
   $("timer").style.visibility = "hidden";
   show("verdict");
-  $("continue-btn").focus();
+  revealContinue();
+}
+
+function revealContinue() {
+  var b = $("continue-btn");
+  function bring() { b.scrollIntoView({ block: "nearest" }); }
+  requestAnimationFrame(function () {
+    b.focus({ preventScroll: true });
+    bring();
+    setTimeout(bring, 300); // again once any pending layout/animation settles
+  });
 }
 
 function closeClue() {
@@ -1914,6 +1937,7 @@ function askFinalAnswer() {
     if (okay) sfx.correct(); else sfx.wrong();
     $("timer").style.visibility = "hidden";
     show("verdict");
+    revealContinue();
   });
   show("clue");
   startTimer(function () { finishAnswer(null, true); });

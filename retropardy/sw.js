@@ -1,6 +1,6 @@
 /* RETROPARDY! service worker — precache everything, serve cache-first.
    Makes the installed app fully offline once it has loaded once. */
-var CACHE = "retropardy-v2";
+var CACHE = "retropardy-v3";
 var ASSETS = [
   "./",
   "./index.html",
