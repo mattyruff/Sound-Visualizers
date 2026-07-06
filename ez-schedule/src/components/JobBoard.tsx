@@ -10,6 +10,7 @@ interface Props {
   onAdd: (input: Omit<Job, 'id'>) => void
   onRemoveJob: (id: string) => void
   onUnassign: (jobId: string, employeeId: string) => void
+  onToggleAcknowledged: (assignmentId: string, next: boolean) => void
   onTextCrew: () => void
 }
 
@@ -23,6 +24,7 @@ export function JobBoard({
   onAdd,
   onRemoveJob,
   onUnassign,
+  onToggleAcknowledged,
   onTextCrew,
 }: Props) {
   const [showForm, setShowForm] = useState(false)
@@ -124,6 +126,7 @@ export function JobBoard({
               crew={crewByJob.get(job.id) ?? []}
               dragActive={dragActive}
               onUnassign={(employeeId) => onUnassign(job.id, employeeId)}
+              onToggleAcknowledged={onToggleAcknowledged}
               onRemove={() => onRemoveJob(job.id)}
             />
           ))}

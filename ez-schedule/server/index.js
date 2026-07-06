@@ -65,7 +65,15 @@ async function loadState() {
     return state
   }
   const raw = await readFile(DATA_FILE, 'utf-8')
-  return JSON.parse(raw)
+  const state = JSON.parse(raw)
+  // migrate records saved before newer fields existed
+  for (const e of state.employees) {
+    if (e.phone === undefined) e.phone = ''
+  }
+  for (const a of state.assignments) {
+    if (a.acknowledged === undefined) a.acknowledged = false
+  }
+  return state
 }
 
 async function saveState(state) {
@@ -75,6 +83,8 @@ async function saveState(state) {
 const app = express()
 app.use(cors())
 app.use(express.json())
+// Twilio posts inbound-SMS webhooks as form-encoded bodies
+app.use(express.urlencoded({ extended: false }))
 
 app.get('/api/state', async (_req, res) => {
   const state = await loadState()
@@ -171,10 +181,21 @@ app.post('/api/assignments', async (req, res) => {
   // double-booking (same employee on more than one job the same day) is
   // allowed here — the client warns and confirms with the user before
   // sending this request, so the server just records whatever it's told
-  const assignment = { id: nanoid(), jobId, employeeId }
+  const assignment = { id: nanoid(), jobId, employeeId, acknowledged: false }
   state.assignments.push(assignment)
   await saveState(state)
   res.status(201).json(assignment)
+})
+
+app.patch('/api/assignments/:id', async (req, res) => {
+  const state = await loadState()
+  const assignment = state.assignments.find((a) => a.id === req.params.id)
+  if (!assignment) return res.status(404).json({ error: 'assignment not found' })
+  if (req.body.acknowledged !== undefined) {
+    assignment.acknowledged = Boolean(req.body.acknowledged)
+  }
+  await saveState(state)
+  res.json(assignment)
 })
 
 app.delete('/api/assignments/:id', async (req, res) => {
@@ -223,6 +244,44 @@ app.post('/api/notify', async (req, res) => {
     }
   }
   res.json({ results })
+})
+
+// Inbound-SMS webhook (point a Twilio phone number's "A message comes in"
+// hook at POST <public-url>/api/sms-reply). Any reply from a known
+// employee's phone acknowledges their current and upcoming assignments.
+app.post('/api/sms-reply', async (req, res) => {
+  const digits = (s) => String(s || '').replace(/\D/g, '')
+  const from = digits(req.body.From).slice(-10)
+  const state = await loadState()
+  const employee = from
+    ? state.employees.find((e) => digits(e.phone).slice(-10) === from && from.length === 10)
+    : undefined
+
+  let reply
+  if (!employee) {
+    reply = 'Sorry, this number is not on file with EZ Schedule.'
+  } else {
+    const today = todayISO()
+    let acked = 0
+    for (const a of state.assignments) {
+      if (a.employeeId !== employee.id || a.acknowledged) continue
+      const job = state.jobs.find((j) => j.id === a.jobId)
+      if (job && job.date >= today) {
+        a.acknowledged = true
+        acked++
+      }
+    }
+    await saveState(state)
+    const first = employee.name.split(' ')[0]
+    reply =
+      acked > 0
+        ? `Thanks ${first}! Your assignment is confirmed.`
+        : `Thanks ${first} — nothing pending to confirm right now.`
+  }
+
+  res
+    .type('text/xml')
+    .send(`<?xml version="1.0" encoding="UTF-8"?><Response><Message>${reply}</Message></Response>`)
 })
 
 app.listen(PORT, () => {

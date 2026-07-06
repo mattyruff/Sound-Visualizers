@@ -5,6 +5,7 @@ import { AssignedChip } from './AssignedChip'
 export interface CrewMember {
   employee: Employee
   assignmentId: string
+  acknowledged: boolean
 }
 
 interface Props {
@@ -12,10 +13,18 @@ interface Props {
   crew: CrewMember[]
   dragActive: boolean
   onUnassign: (employeeId: string) => void
+  onToggleAcknowledged: (assignmentId: string, next: boolean) => void
   onRemove: () => void
 }
 
-export function JobCard({ job, crew, dragActive, onUnassign, onRemove }: Props) {
+export function JobCard({
+  job,
+  crew,
+  dragActive,
+  onUnassign,
+  onToggleAcknowledged,
+  onRemove,
+}: Props) {
   const isFull = crew.length >= job.crewNeeded
   const { setNodeRef, isOver } = useDroppable({
     id: `job-${job.id}`,
@@ -66,12 +75,14 @@ export function JobCard({ job, crew, dragActive, onUnassign, onRemove }: Props) 
         {crew.length === 0 && (
           <span className="px-1 text-sm text-slate-400">Drop an employee here</span>
         )}
-        {crew.map(({ employee, assignmentId }) => (
+        {crew.map(({ employee, assignmentId, acknowledged }) => (
           <AssignedChip
             key={assignmentId}
             employee={employee}
             assignmentId={assignmentId}
             jobId={job.id}
+            acknowledged={acknowledged}
+            onToggleAcknowledged={() => onToggleAcknowledged(assignmentId, !acknowledged)}
             onUnassign={() => onUnassign(employee.id)}
           />
         ))}

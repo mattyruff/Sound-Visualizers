@@ -5,10 +5,19 @@ interface Props {
   employee: Employee
   assignmentId: string
   jobId: string
+  acknowledged: boolean
+  onToggleAcknowledged: () => void
   onUnassign: () => void
 }
 
-export function AssignedChip({ employee, assignmentId, jobId, onUnassign }: Props) {
+export function AssignedChip({
+  employee,
+  assignmentId,
+  jobId,
+  acknowledged,
+  onToggleAcknowledged,
+  onUnassign,
+}: Props) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `chip-${assignmentId}`,
     data: { type: 'chip', employeeId: employee.id, fromJobId: jobId, fromAssignmentId: assignmentId },
@@ -27,9 +36,34 @@ export function AssignedChip({ employee, assignmentId, jobId, onUnassign }: Prop
       }`}
     >
       <span className="flex flex-col leading-tight">
-        <span>{employee.name}</span>
+        <span>
+          {employee.name}
+          {acknowledged && (
+            <span className="ml-1 font-bold text-black" title="Acknowledged assignment">
+              ✓
+            </span>
+          )}
+        </span>
         {employee.role && <span className="text-xs font-normal text-white/80">{employee.role}</span>}
       </span>
+      <button
+        type="button"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={onToggleAcknowledged}
+        className={`flex h-5 w-5 items-center justify-center self-center rounded-full text-xs leading-none ${
+          acknowledged
+            ? 'bg-white text-black hover:bg-white/80'
+            : 'bg-black/20 text-white/70 hover:bg-black/40'
+        }`}
+        aria-label={
+          acknowledged
+            ? `${employee.name} acknowledged — click to clear`
+            : `Mark ${employee.name} as acknowledged`
+        }
+        title={acknowledged ? 'Acknowledged — click to clear' : 'Mark acknowledged'}
+      >
+        ✓
+      </button>
       <button
         type="button"
         onPointerDown={(e) => e.stopPropagation()}

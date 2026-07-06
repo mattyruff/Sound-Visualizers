@@ -80,4 +80,12 @@ export const api = {
     useLocal
       ? localStore.unassign(assignmentId)
       : request<void>(`/assignments/${assignmentId}`, { method: 'DELETE' }),
+
+  setAcknowledged: (assignmentId: string, acknowledged: boolean): Promise<Assignment> =>
+    useLocal
+      ? localStore.setAcknowledged(assignmentId, acknowledged)
+      : request<Assignment>(`/assignments/${assignmentId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ acknowledged }),
+        }),
 }

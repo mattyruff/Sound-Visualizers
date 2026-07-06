@@ -84,7 +84,7 @@ function App() {
       const employee = employeesById.get(a.employeeId)
       if (!employee) continue
       const list = map.get(a.jobId) ?? []
-      list.push({ employee, assignmentId: a.id })
+      list.push({ employee, assignmentId: a.id, acknowledged: a.acknowledged })
       map.set(a.jobId, list)
     }
     return map
@@ -102,6 +102,17 @@ function App() {
     }
     return map
   }, [assignmentsForDate])
+
+  // employees whose every assignment for the day is acknowledged get the
+  // black checkmark in the rail
+  const acknowledgedEmployeeIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const id of assignedEmployeeIds) {
+      const mine = assignmentsForDate.filter((a) => a.employeeId === id)
+      if (mine.length > 0 && mine.every((a) => a.acknowledged)) ids.add(id)
+    }
+    return ids
+  }, [assignedEmployeeIds, assignmentsForDate])
 
   if (error) {
     return (
@@ -176,6 +187,31 @@ function App() {
     })
   }
 
+  async function toggleAcknowledged(assignmentId: string, next: boolean) {
+    setSchedule((s) =>
+      s
+        ? {
+            ...s,
+            assignments: s.assignments.map((a) =>
+              a.id === assignmentId ? { ...a, acknowledged: next } : a,
+            ),
+          }
+        : s,
+    )
+    await api.setAcknowledged(assignmentId, next).catch(() => {
+      setSchedule((s) =>
+        s
+          ? {
+              ...s,
+              assignments: s.assignments.map((a) =>
+                a.id === assignmentId ? { ...a, acknowledged: !next } : a,
+              ),
+            }
+          : s,
+      )
+    })
+  }
+
   async function performAssign(jobId: string, employeeId: string, moveFromAssignmentId?: string) {
     const previousAssignments = schedule!.assignments
     const tempId = `pending-${employeeId}-${jobId}`
@@ -185,7 +221,7 @@ function App() {
             ...s,
             assignments: [
               ...s.assignments.filter((a) => a.id !== moveFromAssignmentId),
-              { id: tempId, jobId, employeeId },
+              { id: tempId, jobId, employeeId, acknowledged: false },
             ],
           }
         : s,
@@ -284,6 +320,7 @@ function App() {
           <EmployeeRail
             employees={schedule.employees}
             assignedEmployeeIds={assignedEmployeeIds}
+            acknowledgedEmployeeIds={acknowledgedEmployeeIds}
             jobCountByEmployee={jobCountByEmployee}
             onAdd={handleAddEmployee}
             onUpdate={handleUpdateEmployee}
@@ -297,6 +334,7 @@ function App() {
             onAdd={handleAddJob}
             onRemoveJob={handleRemoveJob}
             onUnassign={handleUnassign}
+            onToggleAcknowledged={toggleAcknowledged}
             onTextCrew={() => setShowTextCrew(true)}
           />
         </div>
@@ -325,6 +363,7 @@ function App() {
           jobs={jobsForDate}
           assignments={assignmentsForDate}
           employees={schedule.employees}
+          onToggleAcknowledged={toggleAcknowledged}
           onClose={() => setShowTextCrew(false)}
         />
       )}

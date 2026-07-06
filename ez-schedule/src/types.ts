@@ -20,6 +20,9 @@ export interface Assignment {
   id: string
   jobId: string
   employeeId: string
+  // set once the employee confirms they've seen the assignment (manual
+  // toggle by the office, or automatically via SMS reply webhook)
+  acknowledged: boolean
 }
 
 export interface ScheduleState {

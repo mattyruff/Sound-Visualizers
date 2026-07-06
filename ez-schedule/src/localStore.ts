@@ -62,9 +62,12 @@ function load(): ScheduleState {
     return state
   }
   const state = JSON.parse(raw) as ScheduleState
-  // migrate records saved before the phone field existed
+  // migrate records saved before newer fields existed
   for (const e of state.employees) {
     if (e.phone === undefined) e.phone = ''
+  }
+  for (const a of state.assignments) {
+    if (a.acknowledged === undefined) a.acknowledged = false
   }
   return state
 }
@@ -142,8 +145,17 @@ export const localStore = {
     if (existing) return existing
     const currentCrew = state.assignments.filter((a) => a.jobId === jobId).length
     if (currentCrew >= job.crewNeeded) throw new Error('job is fully staffed')
-    const assignment: Assignment = { id: nanoid(), jobId, employeeId }
+    const assignment: Assignment = { id: nanoid(), jobId, employeeId, acknowledged: false }
     state.assignments.push(assignment)
+    save(state)
+    return assignment
+  },
+
+  async setAcknowledged(assignmentId: string, acknowledged: boolean): Promise<Assignment> {
+    const state = load()
+    const assignment = state.assignments.find((a) => a.id === assignmentId)
+    if (!assignment) throw new Error('assignment not found')
+    assignment.acknowledged = acknowledged
     save(state)
     return assignment
   },

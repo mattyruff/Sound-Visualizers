@@ -8,12 +8,15 @@ interface Props {
   jobs: Job[]
   assignments: Assignment[]
   employees: Employee[]
+  onToggleAcknowledged: (assignmentId: string, next: boolean) => void
   onClose: () => void
 }
 
 interface CrewMessage {
   employee: Employee
   body: string
+  assignmentIds: string[]
+  acknowledged: boolean
 }
 
 function composeMessage(employee: Employee, jobs: Job[], date: string): string {
@@ -27,28 +30,43 @@ function composeMessage(employee: Employee, jobs: Job[], date: string): string {
   return `Hi ${first}, your assignment${jobs.length > 1 ? 's' : ''} for ${formatDisplay(date)}: ${lines.join('; ')}`
 }
 
-export function TextCrewModal({ date, jobs, assignments, employees, onClose }: Props) {
+export function TextCrewModal({
+  date,
+  jobs,
+  assignments,
+  employees,
+  onToggleAcknowledged,
+  onClose,
+}: Props) {
   const [sendStatus, setSendStatus] = useState<string | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
 
   const messages = useMemo<CrewMessage[]>(() => {
-    const jobsByEmployee = new Map<string, Job[]>()
+    const byEmployee = new Map<string, { jobs: Job[]; assignments: Assignment[] }>()
     for (const a of assignments) {
       const job = jobs.find((j) => j.id === a.jobId)
       if (!job) continue
-      const list = jobsByEmployee.get(a.employeeId) ?? []
-      list.push(job)
-      jobsByEmployee.set(a.employeeId, list)
+      const entry = byEmployee.get(a.employeeId) ?? { jobs: [], assignments: [] }
+      entry.jobs.push(job)
+      entry.assignments.push(a)
+      byEmployee.set(a.employeeId, entry)
     }
-    return [...jobsByEmployee.entries()]
-      .map(([employeeId, empJobs]) => {
+    return [...byEmployee.entries()]
+      .map(([employeeId, entry]) => {
         const employee = employees.find((e) => e.id === employeeId)
         if (!employee) return null
-        return { employee, body: composeMessage(employee, empJobs, date) }
+        return {
+          employee,
+          body: composeMessage(employee, entry.jobs, date),
+          assignmentIds: entry.assignments.map((a) => a.id),
+          acknowledged: entry.assignments.every((a) => a.acknowledged),
+        }
       })
       .filter((m): m is CrewMessage => m !== null)
       .sort((a, b) => a.employee.name.localeCompare(b.employee.name))
   }, [assignments, jobs, employees, date])
+
+  const ackedCount = messages.filter((m) => m.acknowledged).length
 
   const missingPhones = messages.filter((m) => !m.employee.phone).length
 
@@ -80,9 +98,16 @@ export function TextCrewModal({ date, jobs, assignments, employees, onClose }: P
     <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/40 p-4">
       <div className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-xl bg-white shadow-xl dark:bg-slate-900">
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-700">
-          <h2 className="font-semibold text-slate-900 dark:text-slate-100">
-            Text crew — {formatDisplay(date)}
-          </h2>
+          <div>
+            <h2 className="font-semibold text-slate-900 dark:text-slate-100">
+              Text crew — {formatDisplay(date)}
+            </h2>
+            {messages.length > 0 && (
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {ackedCount}/{messages.length} acknowledged
+              </p>
+            )}
+          </div>
           <button
             type="button"
             onClick={onClose}
@@ -100,7 +125,7 @@ export function TextCrewModal({ date, jobs, assignments, employees, onClose }: P
             </p>
           ) : (
             <ul className="flex flex-col gap-3">
-              {messages.map(({ employee, body }) => (
+              {messages.map(({ employee, body, assignmentIds, acknowledged }) => (
                 <li
                   key={employee.id}
                   className="rounded-lg border border-slate-200 p-3 dark:border-slate-700"
@@ -108,6 +133,11 @@ export function TextCrewModal({ date, jobs, assignments, employees, onClose }: P
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
                       {employee.name}
+                      {acknowledged && (
+                        <span className="ml-1 font-bold text-black dark:text-white" title="Acknowledged">
+                          ✓
+                        </span>
+                      )}
                       {employee.phone ? (
                         <span className="ml-2 font-normal text-slate-400">{employee.phone}</span>
                       ) : (
@@ -117,6 +147,20 @@ export function TextCrewModal({ date, jobs, assignments, employees, onClose }: P
                       )}
                     </span>
                     <span className="flex flex-none gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          assignmentIds.forEach((id) => onToggleAcknowledged(id, !acknowledged))
+                        }
+                        className={`rounded px-2 py-1 text-xs ${
+                          acknowledged
+                            ? 'bg-slate-900 font-medium text-white dark:bg-white dark:text-slate-900'
+                            : 'border border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800'
+                        }`}
+                        title={acknowledged ? 'Click to clear acknowledgment' : 'Mark acknowledged'}
+                      >
+                        {acknowledged ? '✓ Acknowledged' : 'Awaiting reply'}
+                      </button>
                       <button
                         type="button"
                         onClick={() => copyText(body, employee.id)}

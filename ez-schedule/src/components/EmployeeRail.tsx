@@ -11,6 +11,7 @@ export interface EmployeeInput {
 interface Props {
   employees: Employee[]
   assignedEmployeeIds: Set<string>
+  acknowledgedEmployeeIds: Set<string>
   jobCountByEmployee: Map<string, number>
   onAdd: (input: EmployeeInput) => void
   onUpdate: (id: string, input: EmployeeInput) => void
@@ -22,6 +23,7 @@ const emptyForm: EmployeeInput = { name: '', role: '', phone: '' }
 export function EmployeeRail({
   employees,
   assignedEmployeeIds,
+  acknowledgedEmployeeIds,
   jobCountByEmployee,
   onAdd,
   onUpdate,
@@ -115,6 +117,7 @@ export function EmployeeRail({
             key={employee.id}
             employee={employee}
             isAssigned={false}
+            acknowledged={false}
             jobCount={0}
             onEdit={() => openEdit(employee)}
             onRemove={() => onRemove(employee.id)}
@@ -128,6 +131,7 @@ export function EmployeeRail({
             key={employee.id}
             employee={employee}
             isAssigned={true}
+            acknowledged={acknowledgedEmployeeIds.has(employee.id)}
             jobCount={jobCountByEmployee.get(employee.id) ?? 1}
             onEdit={() => openEdit(employee)}
             onRemove={() => onRemove(employee.id)}

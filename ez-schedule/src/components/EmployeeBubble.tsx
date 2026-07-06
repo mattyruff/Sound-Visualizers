@@ -13,12 +13,22 @@ export function initials(name: string): string {
 interface Props {
   employee: Employee
   isAssigned: boolean
+  // true once every one of this employee's assignments for the selected
+  // day has been acknowledged
+  acknowledged: boolean
   jobCount: number
   onEdit: () => void
   onRemove: () => void
 }
 
-export function EmployeeBubble({ employee, isAssigned, jobCount, onEdit, onRemove }: Props) {
+export function EmployeeBubble({
+  employee,
+  isAssigned,
+  acknowledged,
+  jobCount,
+  onEdit,
+  onRemove,
+}: Props) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `employee-${employee.id}`,
     data: { type: 'employee', employeeId: employee.id },
@@ -52,7 +62,14 @@ export function EmployeeBubble({ employee, isAssigned, jobCount, onEdit, onRemov
         )}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-medium">{employee.name}</span>
+        <span className="block truncate text-sm font-medium">
+          {employee.name}
+          {acknowledged && (
+            <span className="ml-1 font-bold text-black" title="Acknowledged assignment">
+              ✓
+            </span>
+          )}
+        </span>
         {employee.role && (
           <span className="block truncate text-xs text-white/80">{employee.role}</span>
         )}

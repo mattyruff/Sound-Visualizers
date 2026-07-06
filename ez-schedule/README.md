@@ -28,6 +28,13 @@ drop will land.
   messaging app pre-filled; "Copy"/"Copy all" grab the text; "Send all"
   mass-sends through Twilio when the local server is running with
   `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` and `TWILIO_FROM` set.
+- **Acknowledgments** — employees who confirm their assignment get a black
+  ✓ next to their name in both the employee list and the job card. The
+  office can toggle it from the ✓ button on a job-card chip or from the
+  Text crew screen (which shows an acknowledged counter). For automatic
+  acknowledgment, point a Twilio number's inbound-message webhook at
+  `POST /api/sms-reply` — any reply from a known employee phone confirms
+  their current assignments and texts back a confirmation.
 - **Local persistence** — everything is saved to `server/data.json` by a tiny
   local Express server. No cloud, no accounts; the file is created with sample
   seed data on first run.
