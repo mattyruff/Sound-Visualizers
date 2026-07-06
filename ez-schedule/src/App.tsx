@@ -13,9 +13,10 @@ import { api } from './api'
 import { todayISO } from './dateUtils'
 import type { Employee, Job, ScheduleState } from './types'
 import { DateNav } from './components/DateNav'
-import { EmployeeRail } from './components/EmployeeRail'
+import { EmployeeRail, type EmployeeInput } from './components/EmployeeRail'
 import { JobBoard } from './components/JobBoard'
 import { ConfirmDialog } from './components/ConfirmDialog'
+import { TextCrewModal } from './components/TextCrewModal'
 import { initials } from './components/EmployeeBubble'
 import type { CrewMember } from './components/JobCard'
 
@@ -44,6 +45,7 @@ function App() {
   const [activeDrag, setActiveDrag] = useState<ActiveDrag | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pendingConflict, setPendingConflict] = useState<PendingConflict | null>(null)
+  const [showTextCrew, setShowTextCrew] = useState(false)
 
   useEffect(() => {
     api
@@ -117,9 +119,16 @@ function App() {
     )
   }
 
-  async function handleAddEmployee(input: { name: string; role: string }) {
+  async function handleAddEmployee(input: EmployeeInput) {
     const employee = await api.createEmployee(input)
     setSchedule((s) => (s ? { ...s, employees: [...s.employees, employee] } : s))
+  }
+
+  async function handleUpdateEmployee(id: string, input: EmployeeInput) {
+    const employee = await api.updateEmployee(id, input)
+    setSchedule((s) =>
+      s ? { ...s, employees: s.employees.map((e) => (e.id === id ? employee : e)) } : s,
+    )
   }
 
   async function handleRemoveEmployee(id: string) {
@@ -277,6 +286,7 @@ function App() {
             assignedEmployeeIds={assignedEmployeeIds}
             jobCountByEmployee={jobCountByEmployee}
             onAdd={handleAddEmployee}
+            onUpdate={handleUpdateEmployee}
             onRemove={handleRemoveEmployee}
           />
           <JobBoard
@@ -287,6 +297,7 @@ function App() {
             onAdd={handleAddJob}
             onRemoveJob={handleRemoveJob}
             onUnassign={handleUnassign}
+            onTextCrew={() => setShowTextCrew(true)}
           />
         </div>
       </div>
@@ -295,7 +306,7 @@ function App() {
         {activeEmployee && (
           <div
             className={`flex items-center gap-3 rounded-full border px-3 py-2 text-white shadow-xl ${
-              activeDrag?.fromChip || assignedEmployeeIds.has(activeEmployee.id)
+              !activeDrag?.fromChip && assignedEmployeeIds.has(activeEmployee.id)
                 ? 'border-red-600 bg-red-500'
                 : 'border-emerald-600 bg-emerald-500'
             }`}
@@ -307,6 +318,16 @@ function App() {
           </div>
         )}
       </DragOverlay>
+
+      {showTextCrew && (
+        <TextCrewModal
+          date={date}
+          jobs={jobsForDate}
+          assignments={assignmentsForDate}
+          employees={schedule.employees}
+          onClose={() => setShowTextCrew(false)}
+        />
+      )}
 
       {pendingConflict && (
         <ConfirmDialog

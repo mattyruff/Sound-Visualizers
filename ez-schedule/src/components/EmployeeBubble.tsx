@@ -14,10 +14,11 @@ interface Props {
   employee: Employee
   isAssigned: boolean
   jobCount: number
+  onEdit: () => void
   onRemove: () => void
 }
 
-export function EmployeeBubble({ employee, isAssigned, jobCount, onRemove }: Props) {
+export function EmployeeBubble({ employee, isAssigned, jobCount, onEdit, onRemove }: Props) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `employee-${employee.id}`,
     data: { type: 'employee', employeeId: employee.id },
@@ -56,16 +57,28 @@ export function EmployeeBubble({ employee, isAssigned, jobCount, onRemove }: Pro
           <span className="block truncate text-xs text-white/80">{employee.role}</span>
         )}
       </span>
-      <button
-        type="button"
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={onRemove}
-        className="invisible flex h-5 w-5 flex-none items-center justify-center rounded-full bg-black/20 text-xs leading-none hover:bg-black/40 group-hover:visible"
-        aria-label={`Remove ${employee.name}`}
-        title="Remove employee"
-      >
-        ×
-      </button>
+      <span className="flex flex-none gap-1 sm:invisible sm:group-hover:visible">
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={onEdit}
+          className="flex h-5 w-5 items-center justify-center rounded-full bg-black/20 text-[10px] leading-none hover:bg-black/40"
+          aria-label={`Edit ${employee.name}`}
+          title="Edit employee"
+        >
+          ✎
+        </button>
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={onRemove}
+          className="flex h-5 w-5 items-center justify-center rounded-full bg-black/20 text-xs leading-none hover:bg-black/40"
+          aria-label={`Remove ${employee.name}`}
+          title="Remove employee"
+        >
+          ×
+        </button>
+      </span>
     </div>
   )
 }

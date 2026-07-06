@@ -12,11 +12,11 @@ function seedData(): ScheduleState {
   const today = todayISO()
   return {
     employees: [
-      { id: nanoid(), name: 'Alex Rivera', role: 'Electrician' },
-      { id: nanoid(), name: 'Sam Chen', role: 'Driver' },
-      { id: nanoid(), name: 'Jordan Blake', role: 'Laborer' },
-      { id: nanoid(), name: 'Casey Nguyen', role: 'Foreman' },
-      { id: nanoid(), name: 'Morgan Diaz', role: 'Laborer' },
+      { id: nanoid(), name: 'Alex Rivera', role: 'Electrician', phone: '' },
+      { id: nanoid(), name: 'Sam Chen', role: 'Driver', phone: '' },
+      { id: nanoid(), name: 'Jordan Blake', role: 'Laborer', phone: '' },
+      { id: nanoid(), name: 'Casey Nguyen', role: 'Foreman', phone: '' },
+      { id: nanoid(), name: 'Morgan Diaz', role: 'Laborer', phone: '' },
     ],
     jobs: [
       {
@@ -61,7 +61,12 @@ function load(): ScheduleState {
     save(state)
     return state
   }
-  return JSON.parse(raw) as ScheduleState
+  const state = JSON.parse(raw) as ScheduleState
+  // migrate records saved before the phone field existed
+  for (const e of state.employees) {
+    if (e.phone === undefined) e.phone = ''
+  }
+  return state
 }
 
 function save(state: ScheduleState) {
@@ -73,10 +78,29 @@ export const localStore = {
     return load()
   },
 
-  async createEmployee(input: { name: string; role: string }): Promise<Employee> {
+  async createEmployee(input: { name: string; role: string; phone: string }): Promise<Employee> {
     const state = load()
-    const employee: Employee = { id: nanoid(), name: input.name.trim(), role: input.role.trim() }
+    const employee: Employee = {
+      id: nanoid(),
+      name: input.name.trim(),
+      role: input.role.trim(),
+      phone: input.phone.trim(),
+    }
     state.employees.push(employee)
+    save(state)
+    return employee
+  },
+
+  async updateEmployee(
+    id: string,
+    input: { name: string; role: string; phone: string },
+  ): Promise<Employee> {
+    const state = load()
+    const employee = state.employees.find((e) => e.id === id)
+    if (!employee) throw new Error('employee not found')
+    employee.name = input.name.trim()
+    employee.role = input.role.trim()
+    employee.phone = input.phone.trim()
     save(state)
     return employee
   },

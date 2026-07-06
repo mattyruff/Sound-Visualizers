@@ -45,7 +45,7 @@ export function JobCard({ job, crew, dragActive, onUnassign, onRemove }: Props) 
         <button
           type="button"
           onClick={onRemove}
-          className="invisible rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500 hover:bg-slate-200 group-hover:visible dark:bg-slate-800 dark:text-slate-400"
+          className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500 hover:bg-slate-200 sm:invisible sm:group-hover:visible dark:bg-slate-800 dark:text-slate-400"
           title="Delete job"
         >
           Delete

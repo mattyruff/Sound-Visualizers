@@ -31,15 +31,34 @@ export const api = {
     }
   },
 
-  createEmployee: (input: { name: string; role: string }): Promise<Employee> =>
+  createEmployee: (input: { name: string; role: string; phone: string }): Promise<Employee> =>
     useLocal
       ? localStore.createEmployee(input)
       : request<Employee>('/employees', { method: 'POST', body: JSON.stringify(input) }),
+
+  updateEmployee: (
+    id: string,
+    input: { name: string; role: string; phone: string },
+  ): Promise<Employee> =>
+    useLocal
+      ? localStore.updateEmployee(id, input)
+      : request<Employee>(`/employees/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
 
   deleteEmployee: (id: string): Promise<void> =>
     useLocal
       ? localStore.deleteEmployee(id)
       : request<void>(`/employees/${id}`, { method: 'DELETE' }),
+
+  // mass-text via the local server's Twilio integration; unavailable in
+  // the static (localStorage) build where there's no server to send from
+  sendTexts: (messages: { to: string; body: string }[]): Promise<{ results: { to: string; ok: boolean }[] }> =>
+    useLocal
+      ? Promise.reject(
+          new Error(
+            'Automatic sending needs the local server (npm run dev) with Twilio configured. Use the per-person Text buttons or Copy instead.',
+          ),
+        )
+      : request('/notify', { method: 'POST', body: JSON.stringify({ messages }) }),
 
   createJob: (input: Omit<Job, 'id'>): Promise<Job> =>
     useLocal

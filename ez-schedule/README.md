@@ -20,9 +20,14 @@ drop will land.
   kept) and their bubble shows a count badge for how many jobs they're on.
 - **Day navigation** — browse and plan any day with prev/next/today controls
   or the date picker; each day has its own jobs and assignments.
-- **Employee & job management** — add/remove employees (name + optional role)
-  and jobs (name, client, address, start time, crew size, notes) right in the
-  UI.
+- **Employee & job management** — add/edit/remove employees (name, role,
+  phone) and jobs (name, client, address, start time, crew size, notes) right
+  in the UI.
+- **Text crew** — composes each assigned employee's job details for the
+  selected day into a text message. Per-person "Text" buttons open your
+  messaging app pre-filled; "Copy"/"Copy all" grab the text; "Send all"
+  mass-sends through Twilio when the local server is running with
+  `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` and `TWILIO_FROM` set.
 - **Local persistence** — everything is saved to `server/data.json` by a tiny
   local Express server. No cloud, no accounts; the file is created with sample
   seed data on first run.

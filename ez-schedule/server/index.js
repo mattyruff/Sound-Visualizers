@@ -17,11 +17,11 @@ function todayISO() {
 function seedData() {
   const today = todayISO()
   const employees = [
-    { id: nanoid(), name: 'Alex Rivera', role: 'Electrician' },
-    { id: nanoid(), name: 'Sam Chen', role: 'Driver' },
-    { id: nanoid(), name: 'Jordan Blake', role: 'Laborer' },
-    { id: nanoid(), name: 'Casey Nguyen', role: 'Foreman' },
-    { id: nanoid(), name: 'Morgan Diaz', role: 'Laborer' },
+    { id: nanoid(), name: 'Alex Rivera', role: 'Electrician', phone: '' },
+    { id: nanoid(), name: 'Sam Chen', role: 'Driver', phone: '' },
+    { id: nanoid(), name: 'Jordan Blake', role: 'Laborer', phone: '' },
+    { id: nanoid(), name: 'Casey Nguyen', role: 'Foreman', phone: '' },
+    { id: nanoid(), name: 'Morgan Diaz', role: 'Laborer', phone: '' },
   ]
   const jobs = [
     {
@@ -82,15 +82,32 @@ app.get('/api/state', async (_req, res) => {
 })
 
 app.post('/api/employees', async (req, res) => {
-  const { name, role } = req.body
+  const { name, role, phone } = req.body
   if (!name || !name.trim()) {
     return res.status(400).json({ error: 'name is required' })
   }
   const state = await loadState()
-  const employee = { id: nanoid(), name: name.trim(), role: (role || '').trim() }
+  const employee = {
+    id: nanoid(),
+    name: name.trim(),
+    role: (role || '').trim(),
+    phone: (phone || '').trim(),
+  }
   state.employees.push(employee)
   await saveState(state)
   res.status(201).json(employee)
+})
+
+app.patch('/api/employees/:id', async (req, res) => {
+  const state = await loadState()
+  const employee = state.employees.find((e) => e.id === req.params.id)
+  if (!employee) return res.status(404).json({ error: 'employee not found' })
+  const { name, role, phone } = req.body
+  if (name !== undefined) employee.name = String(name).trim()
+  if (role !== undefined) employee.role = String(role).trim()
+  if (phone !== undefined) employee.phone = String(phone).trim()
+  await saveState(state)
+  res.json(employee)
 })
 
 app.delete('/api/employees/:id', async (req, res) => {
@@ -165,6 +182,47 @@ app.delete('/api/assignments/:id', async (req, res) => {
   state.assignments = state.assignments.filter((a) => a.id !== req.params.id)
   await saveState(state)
   res.status(204).end()
+})
+
+// Mass-text scaffolding: sends each message via Twilio when the three
+// TWILIO_* env vars are set; otherwise reports that SMS isn't configured
+// so the UI can fall back to sms: links / copy-paste.
+app.post('/api/notify', async (req, res) => {
+  const { messages } = req.body
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return res.status(400).json({ error: 'messages array is required' })
+  }
+  const sid = process.env.TWILIO_ACCOUNT_SID
+  const token = process.env.TWILIO_AUTH_TOKEN
+  const from = process.env.TWILIO_FROM
+  if (!sid || !token || !from) {
+    return res.status(501).json({
+      error:
+        'Automatic SMS is not configured. Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_FROM, then restart the server.',
+    })
+  }
+  const auth = 'Basic ' + Buffer.from(`${sid}:${token}`).toString('base64')
+  const results = []
+  for (const m of messages) {
+    if (!m.to || !m.body) {
+      results.push({ to: m.to || '', ok: false, error: 'missing to/body' })
+      continue
+    }
+    try {
+      const resp = await fetch(
+        `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`,
+        {
+          method: 'POST',
+          headers: { Authorization: auth, 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ To: m.to, From: from, Body: m.body }),
+        },
+      )
+      results.push({ to: m.to, ok: resp.ok })
+    } catch {
+      results.push({ to: m.to, ok: false, error: 'network error' })
+    }
+  }
+  res.json({ results })
 })
 
 app.listen(PORT, () => {

@@ -10,6 +10,7 @@ interface Props {
   onAdd: (input: Omit<Job, 'id'>) => void
   onRemoveJob: (id: string) => void
   onUnassign: (jobId: string, employeeId: string) => void
+  onTextCrew: () => void
 }
 
 const emptyForm = { name: '', client: '', address: '', startTime: '', crewNeeded: 1, notes: '' }
@@ -22,6 +23,7 @@ export function JobBoard({
   onAdd,
   onRemoveJob,
   onUnassign,
+  onTextCrew,
 }: Props) {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState(emptyForm)
@@ -40,13 +42,22 @@ export function JobBoard({
         <h2 className="text-sm font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400">
           Jobs
         </h2>
-        <button
-          type="button"
-          onClick={() => setShowForm((v) => !v)}
-          className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-        >
-          {showForm ? 'Cancel' : '+ Add job'}
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onTextCrew}
+            className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+          >
+            💬 Text crew
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowForm((v) => !v)}
+            className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+          >
+            {showForm ? 'Cancel' : '+ Add job'}
+          </button>
+        </div>
       </div>
 
       {showForm && (

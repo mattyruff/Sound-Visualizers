@@ -2,32 +2,56 @@ import { useState } from 'react'
 import type { Employee } from '../types'
 import { EmployeeBubble } from './EmployeeBubble'
 
+export interface EmployeeInput {
+  name: string
+  role: string
+  phone: string
+}
+
 interface Props {
   employees: Employee[]
   assignedEmployeeIds: Set<string>
   jobCountByEmployee: Map<string, number>
-  onAdd: (input: { name: string; role: string }) => void
+  onAdd: (input: EmployeeInput) => void
+  onUpdate: (id: string, input: EmployeeInput) => void
   onRemove: (id: string) => void
 }
+
+const emptyForm: EmployeeInput = { name: '', role: '', phone: '' }
 
 export function EmployeeRail({
   employees,
   assignedEmployeeIds,
   jobCountByEmployee,
   onAdd,
+  onUpdate,
   onRemove,
 }: Props) {
-  const [showForm, setShowForm] = useState(false)
-  const [name, setName] = useState('')
-  const [role, setRole] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null) // null = closed, '' = adding
+  const [form, setForm] = useState<EmployeeInput>(emptyForm)
+
+  const formOpen = editingId !== null
+
+  function openAdd() {
+    setForm(emptyForm)
+    setEditingId('')
+  }
+
+  function openEdit(employee: Employee) {
+    setForm({ name: employee.name, role: employee.role, phone: employee.phone })
+    setEditingId(employee.id)
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!name.trim()) return
-    onAdd({ name: name.trim(), role: role.trim() })
-    setName('')
-    setRole('')
-    setShowForm(false)
+    if (!form.name.trim()) return
+    if (editingId) {
+      onUpdate(editingId, form)
+    } else {
+      onAdd(form)
+    }
+    setForm(emptyForm)
+    setEditingId(null)
   }
 
   const available = employees.filter((e) => !assignedEmployeeIds.has(e.id))
@@ -41,33 +65,43 @@ export function EmployeeRail({
         </h2>
         <button
           type="button"
-          onClick={() => setShowForm((v) => !v)}
+          onClick={() => (formOpen ? setEditingId(null) : openAdd())}
           className="rounded-full bg-slate-900 px-2.5 py-1 text-xs font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
         >
-          {showForm ? 'Cancel' : '+ Add'}
+          {formOpen ? 'Cancel' : '+ Add'}
         </button>
       </div>
 
-      {showForm && (
-        <form onSubmit={handleSubmit} className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+      {formOpen && (
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900"
+        >
           <input
             autoFocus
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
             placeholder="Name"
             className="rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800"
           />
           <input
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
+            value={form.role}
+            onChange={(e) => setForm({ ...form, role: e.target.value })}
             placeholder="Role (optional)"
+            className="rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800"
+          />
+          <input
+            type="tel"
+            value={form.phone}
+            onChange={(e) => setForm({ ...form, phone: e.target.value })}
+            placeholder="Phone (optional)"
             className="rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800"
           />
           <button
             type="submit"
             className="rounded bg-emerald-600 px-2 py-1 text-sm font-medium text-white hover:bg-emerald-700"
           >
-            Add employee
+            {editingId ? 'Save changes' : 'Add employee'}
           </button>
         </form>
       )}
@@ -82,6 +116,7 @@ export function EmployeeRail({
             employee={employee}
             isAssigned={false}
             jobCount={0}
+            onEdit={() => openEdit(employee)}
             onRemove={() => onRemove(employee.id)}
           />
         ))}
@@ -94,6 +129,7 @@ export function EmployeeRail({
             employee={employee}
             isAssigned={true}
             jobCount={jobCountByEmployee.get(employee.id) ?? 1}
+            onEdit={() => openEdit(employee)}
             onRemove={() => onRemove(employee.id)}
           />
         ))}
