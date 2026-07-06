@@ -2,16 +2,21 @@ import { useDroppable } from '@dnd-kit/core'
 import type { Employee, Job } from '../types'
 import { AssignedChip } from './AssignedChip'
 
+export interface CrewMember {
+  employee: Employee
+  assignmentId: string
+}
+
 interface Props {
   job: Job
-  assignedEmployees: Employee[]
+  crew: CrewMember[]
   dragActive: boolean
   onUnassign: (employeeId: string) => void
   onRemove: () => void
 }
 
-export function JobCard({ job, assignedEmployees, dragActive, onUnassign, onRemove }: Props) {
-  const isFull = assignedEmployees.length >= job.crewNeeded
+export function JobCard({ job, crew, dragActive, onUnassign, onRemove }: Props) {
+  const isFull = crew.length >= job.crewNeeded
   const { setNodeRef, isOver } = useDroppable({
     id: `job-${job.id}`,
     data: { type: 'job', jobId: job.id },
@@ -51,20 +56,22 @@ export function JobCard({ job, assignedEmployees, dragActive, onUnassign, onRemo
         {job.startTime && <span>🕐 {job.startTime}</span>}
         {job.address && <span>📍 {job.address}</span>}
         <span className={isFull ? 'font-medium text-emerald-600 dark:text-emerald-400' : ''}>
-          👥 {assignedEmployees.length}/{job.crewNeeded} filled
+          👥 {crew.length}/{job.crewNeeded} filled
         </span>
       </div>
 
       {job.notes && <p className="text-sm text-slate-500 italic dark:text-slate-400">{job.notes}</p>}
 
       <div className="flex min-h-11 flex-wrap items-center gap-2 rounded-lg border border-dashed border-slate-200 p-2 dark:border-slate-700">
-        {assignedEmployees.length === 0 && (
+        {crew.length === 0 && (
           <span className="px-1 text-sm text-slate-400">Drop an employee here</span>
         )}
-        {assignedEmployees.map((employee) => (
+        {crew.map(({ employee, assignmentId }) => (
           <AssignedChip
-            key={employee.id}
+            key={assignmentId}
             employee={employee}
+            assignmentId={assignmentId}
+            jobId={job.id}
             onUnassign={() => onUnassign(employee.id)}
           />
         ))}

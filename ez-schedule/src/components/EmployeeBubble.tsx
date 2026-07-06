@@ -1,8 +1,7 @@
 import { useDraggable } from '@dnd-kit/core'
-import { CSS } from '@dnd-kit/utilities'
 import type { Employee } from '../types'
 
-function initials(name: string): string {
+export function initials(name: string): string {
   return name
     .split(' ')
     .filter(Boolean)
@@ -19,19 +18,21 @@ interface Props {
 }
 
 export function EmployeeBubble({ employee, isAssigned, jobCount, onRemove }: Props) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `employee-${employee.id}`,
     data: { type: 'employee', employeeId: employee.id },
   })
 
+  // the dragged "copy" is rendered by the DragOverlay in App; the original
+  // bubble stays in place, dimmed, while the clone follows the pointer/finger
   return (
     <div
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      style={{ transform: CSS.Translate.toString(transform) }}
-      className={`group relative flex cursor-grab items-center gap-3 rounded-full border px-3 py-2 shadow-sm transition select-none active:cursor-grabbing ${
-        isDragging ? 'z-50 opacity-50' : ''
+      style={{ touchAction: 'manipulation', WebkitTouchCallout: 'none' }}
+      className={`group relative flex max-w-60 flex-none cursor-grab items-center gap-3 rounded-full border px-3 py-2 shadow-sm transition select-none active:cursor-grabbing sm:max-w-none ${
+        isDragging ? 'opacity-40' : ''
       } ${
         isAssigned
           ? 'border-red-600 bg-red-500 text-white'

@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import type { Employee, Job } from '../types'
-import { JobCard } from './JobCard'
+import type { Job } from '../types'
+import { JobCard, type CrewMember } from './JobCard'
 
 interface Props {
   date: string
   jobs: Job[]
-  employeesByJob: Map<string, Employee[]>
+  crewByJob: Map<string, CrewMember[]>
   dragActive: boolean
   onAdd: (input: Omit<Job, 'id'>) => void
   onRemoveJob: (id: string) => void
@@ -17,7 +17,7 @@ const emptyForm = { name: '', client: '', address: '', startTime: '', crewNeeded
 export function JobBoard({
   date,
   jobs,
-  employeesByJob,
+  crewByJob,
   dragActive,
   onAdd,
   onRemoveJob,
@@ -110,7 +110,7 @@ export function JobBoard({
             <JobCard
               key={job.id}
               job={job}
-              assignedEmployees={employeesByJob.get(job.id) ?? []}
+              crew={crewByJob.get(job.id) ?? []}
               dragActive={dragActive}
               onUnassign={(employeeId) => onUnassign(job.id, employeeId)}
               onRemove={() => onRemoveJob(job.id)}

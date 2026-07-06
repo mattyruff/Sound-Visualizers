@@ -9,7 +9,7 @@ export function DateNav({ date, onChange }: Props) {
   const isToday = date === todayISO()
 
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-slate-200 bg-white px-6 py-4 dark:border-slate-800 dark:bg-slate-900">
+    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-white px-3 py-3 sm:gap-4 sm:px-6 sm:py-4 dark:border-slate-800 dark:bg-slate-900">
       <div className="flex items-center gap-2">
         <button
           type="button"
@@ -36,7 +36,7 @@ export function DateNav({ date, onChange }: Props) {
           ▶
         </button>
       </div>
-      <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+      <h1 className="order-first w-full text-center text-base font-semibold text-slate-900 sm:order-none sm:w-auto sm:text-lg dark:text-slate-100">
         {formatDisplay(date)}
       </h1>
       <input
