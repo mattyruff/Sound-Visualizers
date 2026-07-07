@@ -65,6 +65,23 @@ export const api = {
       ? localStore.createJob(input)
       : request<Job>('/jobs', { method: 'POST', body: JSON.stringify(input) }),
 
+  updateJob: (id: string, input: Omit<Job, 'id'>): Promise<Job> =>
+    useLocal
+      ? localStore.updateJob(id, input)
+      : request<Job>(`/jobs/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
+
+  duplicateJob: (
+    id: string,
+    dates: string[],
+    includeCrew: boolean,
+  ): Promise<{ jobs: Job[]; assignments: Assignment[] }> =>
+    useLocal
+      ? localStore.duplicateJob(id, dates, includeCrew)
+      : request(`/jobs/${id}/duplicate`, {
+          method: 'POST',
+          body: JSON.stringify({ dates, includeCrew }),
+        }),
+
   deleteJob: (id: string): Promise<void> =>
     useLocal ? localStore.deleteJob(id) : request<void>(`/jobs/${id}`, { method: 'DELETE' }),
 

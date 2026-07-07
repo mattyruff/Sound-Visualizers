@@ -128,6 +128,51 @@ export const localStore = {
     return job
   },
 
+  async updateJob(id: string, input: Omit<Job, 'id'>): Promise<Job> {
+    const state = load()
+    const job = state.jobs.find((j) => j.id === id)
+    if (!job) throw new Error('job not found')
+    Object.assign(job, {
+      ...input,
+      name: input.name.trim(),
+      crewNeeded: Math.max(1, Number(input.crewNeeded) || 1),
+    })
+    save(state)
+    return job
+  },
+
+  async duplicateJob(
+    id: string,
+    dates: string[],
+    includeCrew: boolean,
+  ): Promise<{ jobs: Job[]; assignments: Assignment[] }> {
+    const state = load()
+    const source = state.jobs.find((j) => j.id === id)
+    if (!source) throw new Error('job not found')
+    const crew = includeCrew
+      ? state.assignments.filter((a) => a.jobId === id).map((a) => a.employeeId)
+      : []
+    const jobs: Job[] = []
+    const assignments: Assignment[] = []
+    for (const date of dates) {
+      const job: Job = { ...source, id: nanoid(), date }
+      state.jobs.push(job)
+      jobs.push(job)
+      for (const employeeId of crew) {
+        const assignment: Assignment = {
+          id: nanoid(),
+          jobId: job.id,
+          employeeId,
+          acknowledged: false,
+        }
+        state.assignments.push(assignment)
+        assignments.push(assignment)
+      }
+    }
+    save(state)
+    return { jobs, assignments }
+  },
+
   async deleteJob(id: string): Promise<void> {
     const state = load()
     state.jobs = state.jobs.filter((j) => j.id !== id)

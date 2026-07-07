@@ -14,6 +14,8 @@ interface Props {
   dragActive: boolean
   onUnassign: (employeeId: string) => void
   onToggleAcknowledged: (assignmentId: string, next: boolean) => void
+  onEdit: () => void
+  onAddDays: () => void
   onRemove: () => void
 }
 
@@ -23,6 +25,8 @@ export function JobCard({
   dragActive,
   onUnassign,
   onToggleAcknowledged,
+  onEdit,
+  onAddDays,
   onRemove,
 }: Props) {
   const isFull = crew.length >= job.crewNeeded
@@ -51,14 +55,32 @@ export function JobCard({
           <h3 className="font-semibold text-slate-900 dark:text-slate-100">{job.name}</h3>
           <p className="text-sm text-slate-500 dark:text-slate-400">{job.client}</p>
         </div>
-        <button
-          type="button"
-          onClick={onRemove}
-          className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500 hover:bg-slate-200 sm:invisible sm:group-hover:visible dark:bg-slate-800 dark:text-slate-400"
-          title="Delete job"
-        >
-          Delete
-        </button>
+        <span className="flex flex-none gap-1 sm:invisible sm:group-hover:visible">
+          <button
+            type="button"
+            onClick={onEdit}
+            className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400"
+            title="Edit job"
+          >
+            ✎ Edit
+          </button>
+          <button
+            type="button"
+            onClick={onAddDays}
+            className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400"
+            title="Add this job to more days"
+          >
+            📅 Add days
+          </button>
+          <button
+            type="button"
+            onClick={onRemove}
+            className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400"
+            title="Delete job"
+          >
+            Delete
+          </button>
+        </span>
       </div>
 
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-500 dark:text-slate-400">

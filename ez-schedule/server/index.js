@@ -149,6 +149,51 @@ app.post('/api/jobs', async (req, res) => {
   res.status(201).json(job)
 })
 
+app.patch('/api/jobs/:id', async (req, res) => {
+  const state = await loadState()
+  const job = state.jobs.find((j) => j.id === req.params.id)
+  if (!job) return res.status(404).json({ error: 'job not found' })
+  const { date, name, client, address, startTime, crewNeeded, notes } = req.body
+  if (date !== undefined) job.date = String(date)
+  if (name !== undefined) job.name = String(name).trim()
+  if (client !== undefined) job.client = String(client).trim()
+  if (address !== undefined) job.address = String(address).trim()
+  if (startTime !== undefined) job.startTime = String(startTime).trim()
+  if (crewNeeded !== undefined) job.crewNeeded = Math.max(1, Number(crewNeeded) || 1)
+  if (notes !== undefined) job.notes = String(notes).trim()
+  await saveState(state)
+  res.json(job)
+})
+
+// duplicate a job onto additional dates, optionally with its crew
+// (new assignments start unacknowledged — it's a new day to confirm)
+app.post('/api/jobs/:id/duplicate', async (req, res) => {
+  const { dates, includeCrew } = req.body
+  if (!Array.isArray(dates) || dates.length === 0) {
+    return res.status(400).json({ error: 'dates array is required' })
+  }
+  const state = await loadState()
+  const source = state.jobs.find((j) => j.id === req.params.id)
+  if (!source) return res.status(404).json({ error: 'job not found' })
+  const crew = includeCrew
+    ? state.assignments.filter((a) => a.jobId === source.id).map((a) => a.employeeId)
+    : []
+  const jobs = []
+  const assignments = []
+  for (const date of dates) {
+    const job = { ...source, id: nanoid(), date }
+    state.jobs.push(job)
+    jobs.push(job)
+    for (const employeeId of crew) {
+      const assignment = { id: nanoid(), jobId: job.id, employeeId, acknowledged: false }
+      state.assignments.push(assignment)
+      assignments.push(assignment)
+    }
+  }
+  await saveState(state)
+  res.status(201).json({ jobs, assignments })
+})
+
 app.delete('/api/jobs/:id', async (req, res) => {
   const state = await loadState()
   state.jobs = state.jobs.filter((j) => j.id !== req.params.id)

@@ -18,8 +18,16 @@ drop will land.
   job that day pops a confirmation ("… is already booked on X. Do you wish to
   proceed?"). Proceeding books them on both jobs (the original assignment is
   kept) and their bubble shows a count badge for how many jobs they're on.
-- **Day navigation** — browse and plan any day with prev/next/today controls
-  or the date picker; each day has its own jobs and assignments.
+- **Day & week calendar** — a Day/Week toggle in the top bar. Day view is
+  the working board; Week view is a 7-column calendar (Monday start,
+  today highlighted, short-staffed days flagged) with the same
+  drag-and-drop, and clicking a day header opens that day.
+- **Jobs that span days** — "Add days" on any job card copies it to extra
+  dates (with a rest-of-the-work-week shortcut), optionally bringing its
+  crew along; edit-in-place (✎) changes any job detail or moves it to
+  another date.
+- **Status ribbon** — one line under the top bar: short-staffed job count,
+  unassigned employees, and how many people have acknowledged.
 - **Employee & job management** — add/edit/remove employees (name, role,
   phone) and jobs (name, client, address, start time, crew size, notes) right
   in the UI.

@@ -24,6 +24,7 @@ function composeMessage(employee: Employee, jobs: Job[], date: string): string {
     const parts = [j.name]
     if (j.startTime) parts.push(`at ${j.startTime}`)
     if (j.address) parts.push(`— ${j.address}`)
+    if (j.notes) parts.push(`(Note: ${j.notes})`)
     return parts.join(' ')
   })
   const first = employee.name.split(' ')[0]

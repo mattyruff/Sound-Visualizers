@@ -10,13 +10,15 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core'
 import { api } from './api'
-import { todayISO } from './dateUtils'
+import { todayISO, weekDates } from './dateUtils'
 import type { Employee, Job, ScheduleState } from './types'
-import { DateNav } from './components/DateNav'
+import { DateNav, type ViewMode } from './components/DateNav'
 import { EmployeeRail, type EmployeeInput } from './components/EmployeeRail'
 import { JobBoard } from './components/JobBoard'
+import { WeekBoard } from './components/WeekBoard'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { TextCrewModal } from './components/TextCrewModal'
+import { AddDaysModal } from './components/AddDaysModal'
 import { initials } from './components/EmployeeBubble'
 import type { CrewMember } from './components/JobCard'
 
@@ -46,6 +48,8 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const [pendingConflict, setPendingConflict] = useState<PendingConflict | null>(null)
   const [showTextCrew, setShowTextCrew] = useState(false)
+  const [view, setView] = useState<ViewMode>('day')
+  const [addDaysJob, setAddDaysJob] = useState<Job | null>(null)
 
   useEffect(() => {
     api
@@ -78,9 +82,12 @@ function App() {
     return map
   }, [schedule])
 
+  // crew per job across ALL jobs, so both the day board and the week
+  // calendar can read from it
   const crewByJob = useMemo(() => {
     const map = new Map<string, CrewMember[]>()
-    for (const a of assignmentsForDate) {
+    if (!schedule) return map
+    for (const a of schedule.assignments) {
       const employee = employeesById.get(a.employeeId)
       if (!employee) continue
       const list = map.get(a.jobId) ?? []
@@ -88,7 +95,25 @@ function App() {
       map.set(a.jobId, list)
     }
     return map
-  }, [assignmentsForDate, employeesById])
+  }, [schedule, employeesById])
+
+  const weekDatesList = useMemo(() => weekDates(date), [date])
+
+  const jobsByDate = useMemo(() => {
+    const map = new Map<string, Job[]>()
+    if (!schedule) return map
+    const wanted = new Set(weekDatesList)
+    for (const job of schedule.jobs) {
+      if (!wanted.has(job.date)) continue
+      const list = map.get(job.date) ?? []
+      list.push(job)
+      map.set(job.date, list)
+    }
+    for (const list of map.values()) {
+      list.sort((a, b) => a.startTime.localeCompare(b.startTime))
+    }
+    return map
+  }, [schedule, weekDatesList])
 
   const assignedEmployeeIds = useMemo(
     () => new Set(assignmentsForDate.map((a) => a.employeeId)),
@@ -113,6 +138,20 @@ function App() {
     }
     return ids
   }, [assignedEmployeeIds, assignmentsForDate])
+
+  // day-status ribbon numbers
+  const dayStatus = useMemo(() => {
+    const shortStaffed = jobsForDate.filter(
+      (j) => (crewByJob.get(j.id)?.length ?? 0) < j.crewNeeded,
+    ).length
+    const unassigned = schedule ? schedule.employees.length - assignedEmployeeIds.size : 0
+    return {
+      shortStaffed,
+      unassigned,
+      acked: acknowledgedEmployeeIds.size,
+      assigned: assignedEmployeeIds.size,
+    }
+  }, [jobsForDate, crewByJob, schedule, assignedEmployeeIds, acknowledgedEmployeeIds])
 
   if (error) {
     return (
@@ -158,6 +197,27 @@ function App() {
   async function handleAddJob(input: Omit<Job, 'id'>) {
     const job = await api.createJob(input)
     setSchedule((s) => (s ? { ...s, jobs: [...s.jobs, job] } : s))
+  }
+
+  async function handleUpdateJob(id: string, input: Omit<Job, 'id'>) {
+    const job = await api.updateJob(id, input)
+    setSchedule((s) => (s ? { ...s, jobs: s.jobs.map((j) => (j.id === id ? job : j)) } : s))
+  }
+
+  async function handleAddDays(dates: string[], includeCrew: boolean) {
+    if (!addDaysJob) return
+    const jobId = addDaysJob.id
+    setAddDaysJob(null)
+    const { jobs, assignments } = await api.duplicateJob(jobId, dates, includeCrew)
+    setSchedule((s) =>
+      s
+        ? {
+            ...s,
+            jobs: [...s.jobs, ...jobs],
+            assignments: [...s.assignments, ...assignments],
+          }
+        : s,
+    )
   }
 
   async function handleRemoveJob(id: string) {
@@ -315,7 +375,30 @@ function App() {
       onDragCancel={() => setActiveDrag(null)}
     >
       <div className="flex h-screen flex-col bg-slate-100 dark:bg-slate-950">
-        <DateNav date={date} onChange={setDate} />
+        <DateNav date={date} view={view} onChange={setDate} onViewChange={setView} />
+        {view === 'day' && (jobsForDate.length > 0 || schedule.employees.length > 0) && (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-500 sm:px-6 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+            <span className={dayStatus.shortStaffed > 0 ? 'font-medium text-amber-600 dark:text-amber-400' : ''}>
+              {dayStatus.shortStaffed > 0
+                ? `⚠ ${dayStatus.shortStaffed} job${dayStatus.shortStaffed === 1 ? '' : 's'} short-staffed`
+                : '✓ All jobs fully staffed'}
+            </span>
+            <span>
+              {dayStatus.unassigned} employee{dayStatus.unassigned === 1 ? '' : 's'} unassigned
+            </span>
+            {dayStatus.assigned > 0 && (
+              <span
+                className={
+                  dayStatus.acked === dayStatus.assigned
+                    ? 'font-medium text-emerald-600 dark:text-emerald-400'
+                    : ''
+                }
+              >
+                {dayStatus.acked}/{dayStatus.assigned} acknowledged
+              </span>
+            )}
+          </div>
+        )}
         <div className="flex min-h-0 flex-1 flex-col sm:flex-row">
           <EmployeeRail
             employees={schedule.employees}
@@ -326,17 +409,32 @@ function App() {
             onUpdate={handleUpdateEmployee}
             onRemove={handleRemoveEmployee}
           />
-          <JobBoard
-            date={date}
-            jobs={jobsForDate}
-            crewByJob={crewByJob}
-            dragActive={activeDrag !== null}
-            onAdd={handleAddJob}
-            onRemoveJob={handleRemoveJob}
-            onUnassign={handleUnassign}
-            onToggleAcknowledged={toggleAcknowledged}
-            onTextCrew={() => setShowTextCrew(true)}
-          />
+          {view === 'day' ? (
+            <JobBoard
+              date={date}
+              jobs={jobsForDate}
+              crewByJob={crewByJob}
+              dragActive={activeDrag !== null}
+              onAdd={handleAddJob}
+              onUpdateJob={handleUpdateJob}
+              onRemoveJob={handleRemoveJob}
+              onUnassign={handleUnassign}
+              onToggleAcknowledged={toggleAcknowledged}
+              onAddDays={setAddDaysJob}
+              onTextCrew={() => setShowTextCrew(true)}
+            />
+          ) : (
+            <WeekBoard
+              dates={weekDatesList}
+              jobsByDate={jobsByDate}
+              crewByJob={crewByJob}
+              dragActive={activeDrag !== null}
+              onOpenDay={(d) => {
+                setDate(d)
+                setView('day')
+              }}
+            />
+          )}
         </div>
       </div>
 
@@ -356,6 +454,21 @@ function App() {
           </div>
         )}
       </DragOverlay>
+
+      {addDaysJob && (
+        <AddDaysModal
+          job={addDaysJob}
+          existingDates={
+            new Set(
+              schedule.jobs
+                .filter((j) => j.name === addDaysJob.name && j.id !== addDaysJob.id)
+                .map((j) => j.date),
+            )
+          }
+          onConfirm={handleAddDays}
+          onClose={() => setAddDaysJob(null)}
+        />
+      )}
 
       {showTextCrew && (
         <TextCrewModal
