@@ -10,7 +10,7 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core'
 import { api } from './api'
-import { todayISO, weekDates } from './dateUtils'
+import { formatDisplay, todayISO, weekDates } from './dateUtils'
 import type { Employee, Job, ScheduleState, Settings } from './types'
 import { DateNav, type ViewMode } from './components/DateNav'
 import { EmployeeRail, type EmployeeInput } from './components/EmployeeRail'
@@ -52,6 +52,7 @@ function App() {
   const [view, setView] = useState<ViewMode>('day')
   const [addDaysJob, setAddDaysJob] = useState<Job | null>(null)
   const [showReport, setShowReport] = useState(false)
+  const [deleteJobTarget, setDeleteJobTarget] = useState<Job | null>(null)
 
   useEffect(() => {
     api
@@ -424,7 +425,10 @@ function App() {
               dragActive={activeDrag !== null}
               onAdd={handleAddJob}
               onUpdateJob={handleUpdateJob}
-              onRemoveJob={handleRemoveJob}
+              onRemoveJob={(id) => {
+                const job = schedule.jobs.find((j) => j.id === id)
+                if (job) setDeleteJobTarget(job)
+              }}
               onUnassign={handleUnassign}
               onToggleAcknowledged={toggleAcknowledged}
               onAddDays={setAddDaysJob}
@@ -498,6 +502,19 @@ function App() {
           employees={schedule.employees}
           onToggleAcknowledged={toggleAcknowledged}
           onClose={() => setShowTextCrew(false)}
+        />
+      )}
+
+      {deleteJobTarget && (
+        <ConfirmDialog
+          message={`Delete ${deleteJobTarget.name} (${formatDisplay(deleteJobTarget.date)})?`}
+          confirmLabel="Yes"
+          danger
+          onCancel={() => setDeleteJobTarget(null)}
+          onConfirm={() => {
+            void handleRemoveJob(deleteJobTarget.id)
+            setDeleteJobTarget(null)
+          }}
         />
       )}
 

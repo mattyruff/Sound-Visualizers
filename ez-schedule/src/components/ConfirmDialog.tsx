@@ -1,11 +1,19 @@
 interface Props {
   message: string
   confirmLabel?: string
+  // red confirm button for destructive actions (default amber warning)
+  danger?: boolean
   onConfirm: () => void
   onCancel: () => void
 }
 
-export function ConfirmDialog({ message, confirmLabel = 'Proceed', onConfirm, onCancel }: Props) {
+export function ConfirmDialog({
+  message,
+  confirmLabel = 'Proceed',
+  danger = false,
+  onConfirm,
+  onCancel,
+}: Props) {
   return (
     <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/40 p-4">
       <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl dark:bg-slate-900">
@@ -21,7 +29,9 @@ export function ConfirmDialog({ message, confirmLabel = 'Proceed', onConfirm, on
           <button
             type="button"
             onClick={onConfirm}
-            className="rounded-md bg-amber-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-600"
+            className={`rounded-md px-3 py-1.5 text-sm font-medium text-white ${
+              danger ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-500 hover:bg-amber-600'
+            }`}
           >
             {confirmLabel}
           </button>
