@@ -127,7 +127,7 @@ export const localStore = {
       ...input,
       id: nanoid(),
       name: input.name.trim(),
-      crewNeeded: Math.max(1, Number(input.crewNeeded) || 1),
+      crewNeeded: Math.min(20, Math.max(1, Number(input.crewNeeded) || 1)),
     }
     state.jobs.push(job)
     save(state)
@@ -141,7 +141,7 @@ export const localStore = {
     Object.assign(job, {
       ...input,
       name: input.name.trim(),
-      crewNeeded: Math.max(1, Number(input.crewNeeded) || 1),
+      crewNeeded: Math.min(20, Math.max(1, Number(input.crewNeeded) || 1)),
     })
     save(state)
     return job

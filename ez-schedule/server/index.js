@@ -148,7 +148,7 @@ app.post('/api/jobs', async (req, res) => {
     client: (client || '').trim(),
     address: (address || '').trim(),
     startTime: (startTime || '').trim(),
-    crewNeeded: Math.max(1, Number(crewNeeded) || 1),
+    crewNeeded: Math.min(20, Math.max(1, Number(crewNeeded) || 1)),
     notes: (notes || '').trim(),
   }
   state.jobs.push(job)
@@ -166,7 +166,7 @@ app.patch('/api/jobs/:id', async (req, res) => {
   if (client !== undefined) job.client = String(client).trim()
   if (address !== undefined) job.address = String(address).trim()
   if (startTime !== undefined) job.startTime = String(startTime).trim()
-  if (crewNeeded !== undefined) job.crewNeeded = Math.max(1, Number(crewNeeded) || 1)
+  if (crewNeeded !== undefined) job.crewNeeded = Math.min(20, Math.max(1, Number(crewNeeded) || 1))
   if (notes !== undefined) job.notes = String(notes).trim()
   await saveState(state)
   res.json(job)

@@ -17,13 +17,15 @@ interface Props {
   onOpenReport: () => void
 }
 
+// crewNeeded stays a string while typing so clearing the field to type a
+// new number doesn't get force-reset; it's clamped to 1-20 on submit
 interface JobForm {
   date: string
   name: string
   client: string
   address: string
   startTime: string
-  crewNeeded: number
+  crewNeeded: string
   notes: string
 }
 
@@ -48,7 +50,7 @@ export function JobBoard({
   const formOpen = editingId !== null && form !== null
 
   function openAdd() {
-    setForm({ date, name: '', client: '', address: '', startTime: '', crewNeeded: 1, notes: '' })
+    setForm({ date, name: '', client: '', address: '', startTime: '', crewNeeded: '1', notes: '' })
     setEditingId('')
   }
 
@@ -59,7 +61,7 @@ export function JobBoard({
       client: job.client,
       address: job.address,
       startTime: job.startTime,
-      crewNeeded: job.crewNeeded,
+      crewNeeded: String(job.crewNeeded),
       notes: job.notes,
     })
     setEditingId(job.id)
@@ -73,10 +75,12 @@ export function JobBoard({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!form || !form.name.trim()) return
+    const crewNeeded = Math.min(20, Math.max(1, Math.round(Number(form.crewNeeded)) || 1))
+    const payload = { ...form, crewNeeded }
     if (editingId) {
-      onUpdateJob(editingId, form)
+      onUpdateJob(editingId, payload)
     } else {
-      onAdd(form)
+      onAdd(payload)
     }
     closeForm()
   }
@@ -136,20 +140,29 @@ export function JobBoard({
             placeholder="Address"
             className="rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800"
           />
-          <input
-            type="time"
-            value={form.startTime}
-            onChange={(e) => setForm({ ...form, startTime: e.target.value })}
-            className="rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800"
-          />
-          <input
-            type="number"
-            min={1}
-            value={form.crewNeeded}
-            onChange={(e) => setForm({ ...form, crewNeeded: Number(e.target.value) || 1 })}
-            placeholder="Crew needed"
-            className="rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800"
-          />
+          <label className="flex flex-col gap-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+            On Job Time
+            <input
+              type="time"
+              value={form.startTime}
+              onChange={(e) => setForm({ ...form, startTime: e.target.value })}
+              className="rounded border border-slate-300 px-2 py-1 text-sm font-normal text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+            Crew Count (1–20)
+            <input
+              type="number"
+              min={1}
+              max={20}
+              step={1}
+              inputMode="numeric"
+              value={form.crewNeeded}
+              onChange={(e) => setForm({ ...form, crewNeeded: e.target.value })}
+              placeholder="1"
+              className="rounded border border-slate-300 px-2 py-1 text-sm font-normal text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            />
+          </label>
           {editingId !== '' && (
             <label className="col-span-2 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
               Date
