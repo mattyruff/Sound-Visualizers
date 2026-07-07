@@ -1,6 +1,6 @@
 import { nanoid } from 'nanoid'
 import { todayISO } from './dateUtils'
-import type { Assignment, Employee, Job, ScheduleState } from './types'
+import type { Assignment, Employee, Job, ScheduleState, Settings } from './types'
 
 // Browser-storage backend used when the local Express server isn't
 // reachable (e.g. the static GitHub Pages build). Same contract as the
@@ -51,7 +51,12 @@ function seedData(): ScheduleState {
       },
     ],
     assignments: [],
+    settings: defaultSettings(),
   }
+}
+
+function defaultSettings(): Settings {
+  return { reportEmails: [], reportTime: '17:00', reportEnabled: false }
 }
 
 function load(): ScheduleState {
@@ -69,6 +74,7 @@ function load(): ScheduleState {
   for (const a of state.assignments) {
     if (a.acknowledged === undefined) a.acknowledged = false
   }
+  if (!state.settings) state.settings = defaultSettings()
   return state
 }
 
@@ -203,6 +209,17 @@ export const localStore = {
     assignment.acknowledged = acknowledged
     save(state)
     return assignment
+  },
+
+  async updateSettings(input: Settings): Promise<Settings> {
+    const state = load()
+    state.settings = {
+      reportEmails: input.reportEmails.map((e) => e.trim()).filter(Boolean),
+      reportTime: input.reportTime,
+      reportEnabled: input.reportEnabled,
+    }
+    save(state)
+    return state.settings
   },
 
   async unassign(assignmentId: string): Promise<void> {

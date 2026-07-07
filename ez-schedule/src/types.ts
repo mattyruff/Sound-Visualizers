@@ -25,8 +25,17 @@ export interface Assignment {
   acknowledged: boolean
 }
 
+export interface Settings {
+  // manager email addresses that receive the daily status report
+  reportEmails: string[]
+  // HH:MM 24h local time the scheduled report goes out
+  reportTime: string
+  reportEnabled: boolean
+}
+
 export interface ScheduleState {
   employees: Employee[]
   jobs: Job[]
   assignments: Assignment[]
+  settings: Settings
 }

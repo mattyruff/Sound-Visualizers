@@ -11,7 +11,7 @@ import {
 } from '@dnd-kit/core'
 import { api } from './api'
 import { todayISO, weekDates } from './dateUtils'
-import type { Employee, Job, ScheduleState } from './types'
+import type { Employee, Job, ScheduleState, Settings } from './types'
 import { DateNav, type ViewMode } from './components/DateNav'
 import { EmployeeRail, type EmployeeInput } from './components/EmployeeRail'
 import { JobBoard } from './components/JobBoard'
@@ -19,6 +19,7 @@ import { WeekBoard } from './components/WeekBoard'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { TextCrewModal } from './components/TextCrewModal'
 import { AddDaysModal } from './components/AddDaysModal'
+import { ReportModal } from './components/ReportModal'
 import { initials } from './components/EmployeeBubble'
 import type { CrewMember } from './components/JobCard'
 
@@ -50,6 +51,7 @@ function App() {
   const [showTextCrew, setShowTextCrew] = useState(false)
   const [view, setView] = useState<ViewMode>('day')
   const [addDaysJob, setAddDaysJob] = useState<Job | null>(null)
+  const [showReport, setShowReport] = useState(false)
 
   useEffect(() => {
     api
@@ -197,6 +199,11 @@ function App() {
   async function handleAddJob(input: Omit<Job, 'id'>) {
     const job = await api.createJob(input)
     setSchedule((s) => (s ? { ...s, jobs: [...s.jobs, job] } : s))
+  }
+
+  async function handleSaveSettings(input: Settings) {
+    const settings = await api.updateSettings(input)
+    setSchedule((s) => (s ? { ...s, settings } : s))
   }
 
   async function handleUpdateJob(id: string, input: Omit<Job, 'id'>) {
@@ -422,6 +429,7 @@ function App() {
               onToggleAcknowledged={toggleAcknowledged}
               onAddDays={setAddDaysJob}
               onTextCrew={() => setShowTextCrew(true)}
+              onOpenReport={() => setShowReport(true)}
             />
           ) : (
             <WeekBoard
@@ -467,6 +475,18 @@ function App() {
           }
           onConfirm={handleAddDays}
           onClose={() => setAddDaysJob(null)}
+        />
+      )}
+
+      {showReport && (
+        <ReportModal
+          date={date}
+          jobs={jobsForDate}
+          assignments={assignmentsForDate}
+          employees={schedule.employees}
+          settings={schedule.settings}
+          onSaveSettings={handleSaveSettings}
+          onClose={() => setShowReport(false)}
         />
       )}
 

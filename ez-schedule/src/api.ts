@@ -1,4 +1,4 @@
-import type { Assignment, Employee, Job, ScheduleState } from './types'
+import type { Assignment, Employee, Job, ScheduleState, Settings } from './types'
 import { localStore } from './localStore'
 
 // The app talks to the local Express server when it's running (npm run dev)
@@ -97,6 +97,22 @@ export const api = {
     useLocal
       ? localStore.unassign(assignmentId)
       : request<void>(`/assignments/${assignmentId}`, { method: 'DELETE' }),
+
+  updateSettings: (input: Settings): Promise<Settings> =>
+    useLocal
+      ? localStore.updateSettings(input)
+      : request<Settings>('/settings', { method: 'PUT', body: JSON.stringify(input) }),
+
+  // scheduled/immediate emailing needs the local server with SMTP config;
+  // the static build falls back to the mailto: button in the report modal
+  sendReport: (date: string): Promise<{ ok: boolean; sentTo: string[] }> =>
+    useLocal
+      ? Promise.reject(
+          new Error(
+            'Automatic email needs the local server (npm run dev) with SMTP configured. Use "Open in email app" instead.',
+          ),
+        )
+      : request('/report/send', { method: 'POST', body: JSON.stringify({ date }) }),
 
   setAcknowledged: (assignmentId: string, acknowledged: boolean): Promise<Assignment> =>
     useLocal

@@ -1,10 +1,12 @@
 import express from 'express'
 import cors from 'cors'
+import nodemailer from 'nodemailer'
 import { nanoid } from 'nanoid'
 import { readFile, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import { buildReport } from './report.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const DATA_FILE = path.join(__dirname, 'data.json')
@@ -55,7 +57,7 @@ function seedData() {
       notes: '',
     },
   ]
-  return { employees, jobs, assignments: [] }
+  return { employees, jobs, assignments: [], settings: defaultSettings() }
 }
 
 async function loadState() {
@@ -73,7 +75,12 @@ async function loadState() {
   for (const a of state.assignments) {
     if (a.acknowledged === undefined) a.acknowledged = false
   }
+  if (!state.settings) state.settings = defaultSettings()
   return state
+}
+
+function defaultSettings() {
+  return { reportEmails: [], reportTime: '17:00', reportEnabled: false, lastReportDate: '' }
 }
 
 async function saveState(state) {
@@ -328,6 +335,82 @@ app.post('/api/sms-reply', async (req, res) => {
     .type('text/xml')
     .send(`<?xml version="1.0" encoding="UTF-8"?><Response><Message>${reply}</Message></Response>`)
 })
+
+app.put('/api/settings', async (req, res) => {
+  const state = await loadState()
+  const { reportEmails, reportTime, reportEnabled } = req.body
+  if (reportEmails !== undefined) {
+    state.settings.reportEmails = [...reportEmails].map((e) => String(e).trim()).filter(Boolean)
+  }
+  if (reportTime !== undefined) state.settings.reportTime = String(reportTime)
+  if (reportEnabled !== undefined) state.settings.reportEnabled = Boolean(reportEnabled)
+  await saveState(state)
+  res.json(state.settings)
+})
+
+// Email delivery uses SMTP via SMTP_HOST, SMTP_PORT, SMTP_USER,
+// SMTP_PASS and SMTP_FROM env vars (e.g. a Gmail app password or any
+// transactional mail provider's SMTP endpoint).
+function mailTransport() {
+  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS } = process.env
+  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) return null
+  return nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: Number(SMTP_PORT) || 587,
+    secure: Number(SMTP_PORT) === 465,
+    auth: { user: SMTP_USER, pass: SMTP_PASS },
+  })
+}
+
+async function emailReport(state, date) {
+  const transport = mailTransport()
+  if (!transport) {
+    throw new Error(
+      'Email is not configured. Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS and SMTP_FROM, then restart the server.',
+    )
+  }
+  if (state.settings.reportEmails.length === 0) {
+    throw new Error('No manager email addresses saved in report settings.')
+  }
+  const { subject, body } = buildReport(date, state)
+  await transport.sendMail({
+    from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    to: state.settings.reportEmails.join(', '),
+    subject,
+    text: body,
+  })
+}
+
+app.post('/api/report/send', async (req, res) => {
+  const state = await loadState()
+  const date = req.body?.date || todayISO()
+  try {
+    await emailReport(state, date)
+    res.json({ ok: true, sentTo: state.settings.reportEmails })
+  } catch (err) {
+    res.status(501).json({ error: err.message })
+  }
+})
+
+// scheduled daily report: check each minute; fire once per day when the
+// local clock passes the configured time
+setInterval(async () => {
+  try {
+    const state = await loadState()
+    const { reportEnabled, reportTime, reportEmails, lastReportDate } = state.settings
+    if (!reportEnabled || reportEmails.length === 0) return
+    const now = new Date()
+    const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+    const today = todayISO()
+    if (lastReportDate === today || hhmm < reportTime) return
+    await emailReport(state, today)
+    state.settings.lastReportDate = today
+    await saveState(state)
+    console.log(`Scheduled report for ${today} emailed to ${reportEmails.join(', ')}`)
+  } catch (err) {
+    console.error('Scheduled report failed:', err.message)
+  }
+}, 60_000)
 
 app.listen(PORT, () => {
   console.log(`EZ Schedule server listening on http://localhost:${PORT}`)

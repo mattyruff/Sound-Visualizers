@@ -36,6 +36,14 @@ drop will land.
   messaging app pre-filled; "Copy"/"Copy all" grab the text; "Send all"
   mass-sends through Twilio when the local server is running with
   `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` and `TWILIO_FROM` set.
+- **Manager status report** — the "Report" button shows the day's
+  breakdown (jobs not fully staffed, people awaiting acknowledgment,
+  unassigned employees) with Copy and open-in-email-app actions. Managers
+  can get it emailed automatically at a set time each day (e.g. 17:00):
+  save their addresses and the send time in the modal, and run the local
+  server with `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` and
+  `SMTP_FROM` set (any mail provider's SMTP endpoint or a Gmail app
+  password works).
 - **Acknowledgments** — employees who confirm their assignment get a black
   ✓ next to their name in both the employee list and the job card. The
   office can toggle it from the ✓ button on a job-card chip or from the

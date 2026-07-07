@@ -14,6 +14,7 @@ interface Props {
   onToggleAcknowledged: (assignmentId: string, next: boolean) => void
   onAddDays: (job: Job) => void
   onTextCrew: () => void
+  onOpenReport: () => void
 }
 
 interface JobForm {
@@ -38,6 +39,7 @@ export function JobBoard({
   onToggleAcknowledged,
   onAddDays,
   onTextCrew,
+  onOpenReport,
 }: Props) {
   // null = closed, '' = adding, otherwise the id of the job being edited
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -86,6 +88,13 @@ export function JobBoard({
           Jobs
         </h2>
         <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onOpenReport}
+            className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+          >
+            📧 Report
+          </button>
           <button
             type="button"
             onClick={onTextCrew}
