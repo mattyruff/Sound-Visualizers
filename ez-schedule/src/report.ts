@@ -1,5 +1,6 @@
 import type { Assignment, Employee, Job } from './types'
 import { formatDisplay } from './dateUtils'
+import { isOff } from './timeOff'
 
 // Plain-text daily status report for managers. The server has an
 // equivalent builder (server/report.js) used for scheduled emails —
@@ -18,7 +19,8 @@ export function buildReport(
 
   const unfilled = jobs.filter((j) => crewCount(j.id) < j.crewNeeded)
   const assignedIds = new Set(dayAssignments.map((a) => a.employeeId))
-  const unassigned = employees.filter((e) => !assignedIds.has(e.id))
+  const offToday = employees.filter((e) => !assignedIds.has(e.id) && isOff(e, date))
+  const unassigned = employees.filter((e) => !assignedIds.has(e.id) && !isOff(e, date))
   const unacked = dayAssignments.filter((a) => !a.acknowledged)
   const ackedEmployees = [...assignedIds].filter((id) =>
     dayAssignments.filter((a) => a.employeeId === id).every((a) => a.acknowledged),
@@ -30,7 +32,7 @@ export function buildReport(
   lines.push('SUMMARY')
   lines.push(`- Jobs: ${jobs.length} scheduled, ${unfilled.length} not fully staffed`)
   lines.push(
-    `- Crew: ${assignedIds.size} of ${employees.length} employees assigned, ${unassigned.length} unassigned`,
+    `- Crew: ${assignedIds.size} of ${employees.length} employees assigned, ${unassigned.length} unassigned, ${offToday.length} off`,
   )
   lines.push(
     `- Acknowledgments: ${ackedEmployees.length} of ${assignedIds.size} assigned employees fully confirmed`,
@@ -60,6 +62,14 @@ export function buildReport(
     lines.push('')
     lines.push('UNASSIGNED EMPLOYEES')
     for (const e of unassigned) {
+      lines.push(`- ${e.name}${e.role ? ` (${e.role})` : ''}`)
+    }
+  }
+
+  if (offToday.length > 0) {
+    lines.push('')
+    lines.push('OFF TODAY')
+    for (const e of offToday) {
       lines.push(`- ${e.name}${e.role ? ` (${e.role})` : ''}`)
     }
   }

@@ -13,6 +13,9 @@ export function initials(name: string): string {
 interface Props {
   employee: Employee
   isAssigned: boolean
+  // day off on the selected date — gray bubble (assignment still allowed
+  // after a warn-and-confirm)
+  isOff: boolean
   // true once every one of this employee's assignments for the selected
   // day has been acknowledged
   acknowledged: boolean
@@ -24,6 +27,7 @@ interface Props {
 export function EmployeeBubble({
   employee,
   isAssigned,
+  isOff,
   acknowledged,
   jobCount,
   onEdit,
@@ -47,7 +51,9 @@ export function EmployeeBubble({
       } ${
         isAssigned
           ? 'border-red-600 bg-red-500 text-white'
-          : 'border-emerald-600 bg-emerald-500 text-white'
+          : isOff
+            ? 'border-slate-500 bg-slate-400 text-white dark:border-slate-600 dark:bg-slate-600'
+            : 'border-emerald-600 bg-emerald-500 text-white'
       }`}
     >
       <span className="relative flex h-9 w-9 flex-none items-center justify-center rounded-full bg-white/20 text-sm font-semibold">
@@ -67,6 +73,14 @@ export function EmployeeBubble({
           {acknowledged && (
             <span className="ml-1 font-bold text-black" title="Acknowledged assignment">
               ✓
+            </span>
+          )}
+          {isOff && !isAssigned && (
+            <span
+              className="ml-1.5 rounded bg-black/25 px-1 py-0.5 text-[10px] font-bold tracking-wide"
+              title="Day off"
+            >
+              OFF
             </span>
           )}
         </span>

@@ -22,15 +22,21 @@ import { AddDaysModal } from './components/AddDaysModal'
 import { ReportModal } from './components/ReportModal'
 import { initials } from './components/EmployeeBubble'
 import type { CrewMember } from './components/JobCard'
+import { isOff } from './timeOff'
 
 interface PendingConflict {
   jobId: string
   employeeId: string
-  employeeName: string
-  conflictingJobName: string
+  message: string
   // set when the drop came from a chip inside another job — confirming
   // moves the employee instead of adding a second booking
   moveFromAssignmentId?: string
+}
+
+// prompt to pull an employee off jobs that fall on newly-marked days off
+interface OffCleanup {
+  message: string
+  assignments: { jobId: string; employeeId: string }[]
 }
 
 interface ActiveDrag {
@@ -53,6 +59,7 @@ function App() {
   const [addDaysJob, setAddDaysJob] = useState<Job | null>(null)
   const [showReport, setShowReport] = useState(false)
   const [deleteJobTarget, setDeleteJobTarget] = useState<Job | null>(null)
+  const [offCleanup, setOffCleanup] = useState<OffCleanup | null>(null)
 
   useEffect(() => {
     api
@@ -142,19 +149,45 @@ function App() {
     return ids
   }, [assignedEmployeeIds, assignmentsForDate])
 
+  // employees on a day off for the selected date (gray in the rail)
+  const offEmployeeIds = useMemo(() => {
+    const ids = new Set<string>()
+    schedule?.employees.forEach((e) => {
+      if (isOff(e, date)) ids.add(e.id)
+    })
+    return ids
+  }, [schedule, date])
+
+  // employees off per week day, for the week-view header badges
+  const offByDate = useMemo(() => {
+    const map = new Map<string, number>()
+    if (!schedule) return map
+    for (const d of weekDatesList) {
+      map.set(d, schedule.employees.filter((e) => isOff(e, d)).length)
+    }
+    return map
+  }, [schedule, weekDatesList])
+
   // day-status ribbon numbers
   const dayStatus = useMemo(() => {
     const shortStaffed = jobsForDate.filter(
       (j) => (crewByJob.get(j.id)?.length ?? 0) < j.crewNeeded,
     ).length
-    const unassigned = schedule ? schedule.employees.length - assignedEmployeeIds.size : 0
+    const off = schedule
+      ? schedule.employees.filter((e) => !assignedEmployeeIds.has(e.id) && offEmployeeIds.has(e.id))
+          .length
+      : 0
+    const unassigned = schedule
+      ? schedule.employees.length - assignedEmployeeIds.size - off
+      : 0
     return {
       shortStaffed,
       unassigned,
+      off,
       acked: acknowledgedEmployeeIds.size,
       assigned: assignedEmployeeIds.size,
     }
-  }, [jobsForDate, crewByJob, schedule, assignedEmployeeIds, acknowledgedEmployeeIds])
+  }, [jobsForDate, crewByJob, schedule, assignedEmployeeIds, offEmployeeIds, acknowledgedEmployeeIds])
 
   if (error) {
     return (
@@ -182,6 +215,23 @@ function App() {
     setSchedule((s) =>
       s ? { ...s, employees: s.employees.map((e) => (e.id === id ? employee : e)) } : s,
     )
+
+    // if they're assigned to jobs on newly-marked days off, offer to pull
+    // them off those jobs
+    const conflicting = schedule!.assignments
+      .map((a) => ({ a, job: schedule!.jobs.find((j) => j.id === a.jobId) }))
+      .filter(({ a, job }) => a.employeeId === id && job && isOff(employee, job.date))
+    if (conflicting.length > 0) {
+      const jobList = conflicting
+        .map(({ job }) => `${job!.name} (${formatDisplay(job!.date)})`)
+        .join(', ')
+      setOffCleanup({
+        message: `${employee.name} is assigned to ${jobList} on marked days off. Remove them from ${
+          conflicting.length === 1 ? 'that job' : 'those jobs'
+        }?`,
+        assignments: conflicting.map(({ a }) => ({ jobId: a.jobId, employeeId: a.employeeId })),
+      })
+    }
   }
 
   async function handleRemoveEmployee(id: string) {
@@ -348,23 +398,30 @@ function App() {
     const currentCrew = schedule!.assignments.filter((a) => a.jobId === jobId).length
     if (currentCrew >= job.crewNeeded) return
 
-    // warn when the employee would still be booked on another same-day job
-    // (excluding the job they're being moved away from)
+    // warn (don't block) when the employee has the day off, or would still
+    // be booked on another same-day job (excluding the one they're being
+    // moved away from)
     const conflict = schedule!.assignments.find((a) => {
       if (a.employeeId !== employeeId) return false
       if (a.id === moveFromAssignmentId) return false
       const otherJob = schedule!.jobs.find((j) => j.id === a.jobId)
       return !!otherJob && otherJob.date === job.date && otherJob.id !== job.id
     })
+    const employee = schedule!.employees.find((e) => e.id === employeeId)
+    const offThisDay = employee ? isOff(employee, job.date) : false
 
-    if (conflict) {
-      const conflictingJob = schedule!.jobs.find((j) => j.id === conflict.jobId)
-      const employee = schedule!.employees.find((e) => e.id === employeeId)
+    if (conflict || offThisDay) {
+      const name = employee?.name ?? 'This employee'
+      const conflictingJob = conflict
+        ? schedule!.jobs.find((j) => j.id === conflict.jobId)
+        : undefined
+      const reasons: string[] = []
+      if (offThisDay) reasons.push(`has the day off on ${formatDisplay(job.date)}`)
+      if (conflict) reasons.push(`is already booked on ${conflictingJob?.name ?? 'another job'}`)
       setPendingConflict({
         jobId,
         employeeId,
-        employeeName: employee?.name ?? 'This employee',
-        conflictingJobName: conflictingJob?.name ?? 'another job',
+        message: `${name} ${reasons.join(' and ')}. Do you wish to proceed?`,
         moveFromAssignmentId,
       })
       return
@@ -394,6 +451,11 @@ function App() {
             <span>
               {dayStatus.unassigned} employee{dayStatus.unassigned === 1 ? '' : 's'} unassigned
             </span>
+            {dayStatus.off > 0 && (
+              <span>
+                {dayStatus.off} off today
+              </span>
+            )}
             {dayStatus.assigned > 0 && (
               <span
                 className={
@@ -411,6 +473,7 @@ function App() {
           <EmployeeRail
             employees={schedule.employees}
             assignedEmployeeIds={assignedEmployeeIds}
+            offEmployeeIds={offEmployeeIds}
             acknowledgedEmployeeIds={acknowledgedEmployeeIds}
             jobCountByEmployee={jobCountByEmployee}
             onAdd={handleAddEmployee}
@@ -440,6 +503,7 @@ function App() {
               dates={weekDatesList}
               jobsByDate={jobsByDate}
               crewByJob={crewByJob}
+              offByDate={offByDate}
               dragActive={activeDrag !== null}
               onOpenDay={(d) => {
                 setDate(d)
@@ -518,9 +582,24 @@ function App() {
         />
       )}
 
+      {offCleanup && (
+        <ConfirmDialog
+          message={offCleanup.message}
+          confirmLabel="Remove"
+          danger
+          onCancel={() => setOffCleanup(null)}
+          onConfirm={() => {
+            for (const { jobId, employeeId } of offCleanup.assignments) {
+              void handleUnassign(jobId, employeeId)
+            }
+            setOffCleanup(null)
+          }}
+        />
+      )}
+
       {pendingConflict && (
         <ConfirmDialog
-          message={`${pendingConflict.employeeName} is already booked on ${pendingConflict.conflictingJobName}. Do you wish to proceed?`}
+          message={pendingConflict.message}
           confirmLabel="Proceed"
           onCancel={() => setPendingConflict(null)}
           onConfirm={() => {

@@ -1,6 +1,6 @@
 import { nanoid } from 'nanoid'
 import { todayISO } from './dateUtils'
-import type { Assignment, Employee, Job, ScheduleState, Settings } from './types'
+import type { Assignment, Employee, Job, ScheduleState, Settings, TimeOffRange } from './types'
 
 // Browser-storage backend used when the local Express server isn't
 // reachable (e.g. the static GitHub Pages build). Same contract as the
@@ -12,11 +12,11 @@ function seedData(): ScheduleState {
   const today = todayISO()
   return {
     employees: [
-      { id: nanoid(), name: 'Alex Rivera', role: 'Electrician', phone: '' },
-      { id: nanoid(), name: 'Sam Chen', role: 'Driver', phone: '' },
-      { id: nanoid(), name: 'Jordan Blake', role: 'Laborer', phone: '' },
-      { id: nanoid(), name: 'Casey Nguyen', role: 'Foreman', phone: '' },
-      { id: nanoid(), name: 'Morgan Diaz', role: 'Laborer', phone: '' },
+      { id: nanoid(), name: 'Alex Rivera', role: 'Electrician', phone: '', timeOff: [] },
+      { id: nanoid(), name: 'Sam Chen', role: 'Driver', phone: '', timeOff: [] },
+      { id: nanoid(), name: 'Jordan Blake', role: 'Laborer', phone: '', timeOff: [] },
+      { id: nanoid(), name: 'Casey Nguyen', role: 'Foreman', phone: '', timeOff: [] },
+      { id: nanoid(), name: 'Morgan Diaz', role: 'Laborer', phone: '', timeOff: [] },
     ],
     jobs: [
       {
@@ -70,6 +70,7 @@ function load(): ScheduleState {
   // migrate records saved before newer fields existed
   for (const e of state.employees) {
     if (e.phone === undefined) e.phone = ''
+    if (!Array.isArray(e.timeOff)) e.timeOff = []
   }
   for (const a of state.assignments) {
     if (a.acknowledged === undefined) a.acknowledged = false
@@ -87,13 +88,19 @@ export const localStore = {
     return load()
   },
 
-  async createEmployee(input: { name: string; role: string; phone: string }): Promise<Employee> {
+  async createEmployee(input: {
+    name: string
+    role: string
+    phone: string
+    timeOff: TimeOffRange[]
+  }): Promise<Employee> {
     const state = load()
     const employee: Employee = {
       id: nanoid(),
       name: input.name.trim(),
       role: input.role.trim(),
       phone: input.phone.trim(),
+      timeOff: input.timeOff,
     }
     state.employees.push(employee)
     save(state)
@@ -102,7 +109,7 @@ export const localStore = {
 
   async updateEmployee(
     id: string,
-    input: { name: string; role: string; phone: string },
+    input: { name: string; role: string; phone: string; timeOff: TimeOffRange[] },
   ): Promise<Employee> {
     const state = load()
     const employee = state.employees.find((e) => e.id === id)
@@ -110,6 +117,7 @@ export const localStore = {
     employee.name = input.name.trim()
     employee.role = input.role.trim()
     employee.phone = input.phone.trim()
+    employee.timeOff = input.timeOff
     save(state)
     return employee
   },

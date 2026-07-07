@@ -20,7 +20,10 @@ export function buildReport(date, state) {
 
   const unfilled = jobs.filter((j) => crewCount(j.id) < j.crewNeeded)
   const assignedIds = new Set(dayAssignments.map((a) => a.employeeId))
-  const unassigned = state.employees.filter((e) => !assignedIds.has(e.id))
+  const isOff = (e) =>
+    Array.isArray(e.timeOff) && e.timeOff.some((r) => r.from <= date && date <= (r.to || r.from))
+  const offToday = state.employees.filter((e) => !assignedIds.has(e.id) && isOff(e))
+  const unassigned = state.employees.filter((e) => !assignedIds.has(e.id) && !isOff(e))
   const unacked = dayAssignments.filter((a) => !a.acknowledged)
   const ackedEmployees = [...assignedIds].filter((id) =>
     dayAssignments.filter((a) => a.employeeId === id).every((a) => a.acknowledged),
@@ -32,7 +35,7 @@ export function buildReport(date, state) {
   lines.push('SUMMARY')
   lines.push(`- Jobs: ${jobs.length} scheduled, ${unfilled.length} not fully staffed`)
   lines.push(
-    `- Crew: ${assignedIds.size} of ${state.employees.length} employees assigned, ${unassigned.length} unassigned`,
+    `- Crew: ${assignedIds.size} of ${state.employees.length} employees assigned, ${unassigned.length} unassigned, ${offToday.length} off`,
   )
   lines.push(
     `- Acknowledgments: ${ackedEmployees.length} of ${assignedIds.size} assigned employees fully confirmed`,
@@ -62,6 +65,14 @@ export function buildReport(date, state) {
     lines.push('')
     lines.push('UNASSIGNED EMPLOYEES')
     for (const e of unassigned) {
+      lines.push(`- ${e.name}${e.role ? ` (${e.role})` : ''}`)
+    }
+  }
+
+  if (offToday.length > 0) {
+    lines.push('')
+    lines.push('OFF TODAY')
+    for (const e of offToday) {
       lines.push(`- ${e.name}${e.role ? ` (${e.role})` : ''}`)
     }
   }

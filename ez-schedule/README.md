@@ -44,6 +44,13 @@ drop will land.
   server with `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` and
   `SMTP_FROM` set (any mail provider's SMTP endpoint or a Gmail app
   password works).
+- **Days off** — mark single days or vacation ranges on any employee
+  (pencil button → "Days off"). On those days their bubble turns gray
+  with an OFF tag and sinks below the assigned group; assigning them
+  anyway asks for confirmation first, and marking someone off while
+  they're already assigned offers to pull them from those jobs. Off
+  counts show in the status ribbon, week-view headers, and the manager
+  report.
 - **Acknowledgments** — employees who confirm their assignment get a black
   ✓ next to their name in both the employee list and the job card. The
   office can toggle it from the ✓ button on a job-card chip or from the

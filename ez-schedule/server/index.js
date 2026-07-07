@@ -19,11 +19,11 @@ function todayISO() {
 function seedData() {
   const today = todayISO()
   const employees = [
-    { id: nanoid(), name: 'Alex Rivera', role: 'Electrician', phone: '' },
-    { id: nanoid(), name: 'Sam Chen', role: 'Driver', phone: '' },
-    { id: nanoid(), name: 'Jordan Blake', role: 'Laborer', phone: '' },
-    { id: nanoid(), name: 'Casey Nguyen', role: 'Foreman', phone: '' },
-    { id: nanoid(), name: 'Morgan Diaz', role: 'Laborer', phone: '' },
+    { id: nanoid(), name: 'Alex Rivera', role: 'Electrician', phone: '', timeOff: [] },
+    { id: nanoid(), name: 'Sam Chen', role: 'Driver', phone: '', timeOff: [] },
+    { id: nanoid(), name: 'Jordan Blake', role: 'Laborer', phone: '', timeOff: [] },
+    { id: nanoid(), name: 'Casey Nguyen', role: 'Foreman', phone: '', timeOff: [] },
+    { id: nanoid(), name: 'Morgan Diaz', role: 'Laborer', phone: '', timeOff: [] },
   ]
   const jobs = [
     {
@@ -71,6 +71,7 @@ async function loadState() {
   // migrate records saved before newer fields existed
   for (const e of state.employees) {
     if (e.phone === undefined) e.phone = ''
+    if (!Array.isArray(e.timeOff)) e.timeOff = []
   }
   for (const a of state.assignments) {
     if (a.acknowledged === undefined) a.acknowledged = false
@@ -98,8 +99,19 @@ app.get('/api/state', async (_req, res) => {
   res.json(state)
 })
 
+function sanitizeTimeOff(timeOff) {
+  if (!Array.isArray(timeOff)) return []
+  return timeOff
+    .filter((r) => r && r.from)
+    .map((r) => ({
+      id: r.id || nanoid(),
+      from: String(r.from),
+      to: String(r.to || r.from),
+    }))
+}
+
 app.post('/api/employees', async (req, res) => {
-  const { name, role, phone } = req.body
+  const { name, role, phone, timeOff } = req.body
   if (!name || !name.trim()) {
     return res.status(400).json({ error: 'name is required' })
   }
@@ -109,6 +121,7 @@ app.post('/api/employees', async (req, res) => {
     name: name.trim(),
     role: (role || '').trim(),
     phone: (phone || '').trim(),
+    timeOff: sanitizeTimeOff(timeOff),
   }
   state.employees.push(employee)
   await saveState(state)
@@ -119,10 +132,11 @@ app.patch('/api/employees/:id', async (req, res) => {
   const state = await loadState()
   const employee = state.employees.find((e) => e.id === req.params.id)
   if (!employee) return res.status(404).json({ error: 'employee not found' })
-  const { name, role, phone } = req.body
+  const { name, role, phone, timeOff } = req.body
   if (name !== undefined) employee.name = String(name).trim()
   if (role !== undefined) employee.role = String(role).trim()
   if (phone !== undefined) employee.phone = String(phone).trim()
+  if (timeOff !== undefined) employee.timeOff = sanitizeTimeOff(timeOff)
   await saveState(state)
   res.json(employee)
 })

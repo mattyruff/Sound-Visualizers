@@ -1,8 +1,17 @@
+// inclusive date range an employee is off work; a single day off has
+// from === to
+export interface TimeOffRange {
+  id: string
+  from: string // YYYY-MM-DD
+  to: string // YYYY-MM-DD
+}
+
 export interface Employee {
   id: string
   name: string
   role: string
   phone: string
+  timeOff: TimeOffRange[]
 }
 
 export interface Job {

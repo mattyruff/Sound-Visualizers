@@ -85,11 +85,19 @@ interface Props {
   dates: string[]
   jobsByDate: Map<string, Job[]>
   crewByJob: Map<string, CrewMember[]>
+  offByDate: Map<string, number>
   dragActive: boolean
   onOpenDay: (date: string) => void
 }
 
-export function WeekBoard({ dates, jobsByDate, crewByJob, dragActive, onOpenDay }: Props) {
+export function WeekBoard({
+  dates,
+  jobsByDate,
+  crewByJob,
+  offByDate,
+  dragActive,
+  onOpenDay,
+}: Props) {
   const today = todayISO()
   return (
     <section className="flex flex-1 overflow-x-auto p-3 sm:p-4">
@@ -119,6 +127,11 @@ export function WeekBoard({ dates, jobsByDate, crewByJob, dragActive, onOpenDay 
                 {shortStaffed > 0 && (
                   <span className="mt-0.5 rounded-full bg-amber-400 px-1.5 text-[10px] font-bold text-amber-950">
                     {shortStaffed} short
+                  </span>
+                )}
+                {(offByDate.get(date) ?? 0) > 0 && (
+                  <span className="mt-0.5 rounded-full bg-slate-400 px-1.5 text-[10px] font-bold text-white dark:bg-slate-600">
+                    {offByDate.get(date)} off
                   </span>
                 )}
               </button>

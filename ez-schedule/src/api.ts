@@ -1,4 +1,4 @@
-import type { Assignment, Employee, Job, ScheduleState, Settings } from './types'
+import type { Assignment, Employee, Job, ScheduleState, Settings, TimeOffRange } from './types'
 import { localStore } from './localStore'
 
 // The app talks to the local Express server when it's running (npm run dev)
@@ -31,14 +31,19 @@ export const api = {
     }
   },
 
-  createEmployee: (input: { name: string; role: string; phone: string }): Promise<Employee> =>
+  createEmployee: (input: {
+    name: string
+    role: string
+    phone: string
+    timeOff: TimeOffRange[]
+  }): Promise<Employee> =>
     useLocal
       ? localStore.createEmployee(input)
       : request<Employee>('/employees', { method: 'POST', body: JSON.stringify(input) }),
 
   updateEmployee: (
     id: string,
-    input: { name: string; role: string; phone: string },
+    input: { name: string; role: string; phone: string; timeOff: TimeOffRange[] },
   ): Promise<Employee> =>
     useLocal
       ? localStore.updateEmployee(id, input)
