@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><circle cx=%2232%22 cy=%2232%22 r=%2226%22 fill=%22none%22 stroke=%22%234fd8c4%22 stroke-width=%224%22/><path d=%22M18 32h6l4-10 8 20 4-10h6%22 fill=%22none%22 stroke=%22%234fd8c4%22 stroke-width=%224%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/></svg>">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="description" content="Vox — a vocal toning lab. Real-time biofeedback on pitch, breath, clarity and resonance while you tone. All analysis runs in your browser; nothing is recorded or uploaded.">
+<title>Vox — Vocal Toning Lab</title>
+<style>
+  :root{
+    --void:#04070a; --ink:#d9e6e2; --muted:#6f8580;
+    --gold:#f5c542; --gold-pale:#ffe9a8; --gold-deep:#7a5a18;
+    --aqua:#4fd8c4; --aqua-pale:#b8f3e9; --aqua-deep:#1a5e54;
+    --violet:#8a7cc9;
+    --line:rgba(79,216,196,.16); --glass:rgba(8,14,13,.55);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:var(--void);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;-webkit-font-smoothing:antialiased}
+  body::before{content:"";position:fixed;inset:0;z-index:-1;
+    background:radial-gradient(90% 70% at 50% 30%,#0a161430 0%,#04070a 70%)}
+
+  #nav{position:fixed;top:16px;right:16px;z-index:40;display:flex;align-items:center;gap:3px;padding:5px;
+    background:var(--glass);border:1px solid var(--line);border-radius:12px;
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);transition:opacity .4s ease}
+  #nav a{font:inherit;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;
+    color:var(--muted);padding:.42rem .8rem;border-radius:8px;transition:.15s}
+  #nav a:hover{color:var(--aqua-pale);background:rgba(79,216,196,.08)}
+  #nav a.active{color:var(--aqua);background:rgba(79,216,196,.12)}
+  #nav a.home{font-size:1rem;line-height:1;padding:.35rem .58rem;color:var(--aqua)}
+
+  /* ---------- veil ---------- */
+  #veil{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:1.4rem;background:radial-gradient(120% 90% at 50% 42%,#08131130 0%,#04070a 72%);z-index:30;
+    transition:opacity .6s ease;padding:0 6vw;text-align:center}
+  #veil.gone{opacity:0;pointer-events:none}
+  #veil h1{font-weight:300;font-size:1.6rem;letter-spacing:.44em;text-transform:uppercase;color:var(--aqua-pale);padding-left:.44em}
+  #veil p{color:var(--muted);font-size:.84rem;letter-spacing:.05em;max-width:40ch;line-height:1.85}
+  #veil .priv{font-size:.68rem;opacity:.7;max-width:44ch}
+  button.b{appearance:none;border:1px solid var(--aqua-deep);background:transparent;color:var(--aqua);
+    font:inherit;font-size:.78rem;letter-spacing:.1em;padding:.66rem 1.5rem;border-radius:999px;cursor:pointer;
+    transition:.18s;text-transform:uppercase}
+  button.b:hover{border-color:var(--aqua);background:rgba(79,216,196,.08);color:var(--aqua-pale)}
+  button.b.solid{background:var(--aqua);color:#04211c;border-color:var(--aqua)}
+  button.b.solid:hover{background:var(--aqua-pale)}
+
+  /* ---------- lab ---------- */
+  #lab{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;z-index:5;
+    padding:60px 4vw 120px;gap:1rem;overflow-y:auto;transition:opacity .5s ease}
+  #lab.hide{opacity:0;pointer-events:none}
+
+  #hero{display:flex;align-items:baseline;gap:1.2rem;margin-top:.4rem}
+  #noteBig{font-weight:200;font-size:clamp(3rem,9vw,4.6rem);letter-spacing:.06em;color:var(--aqua-pale);
+    min-width:2ch;text-align:center;line-height:1}
+  #noteBig small{font-size:45%;color:var(--muted)}
+  #hzTxt{font-size:.85rem;color:var(--muted);letter-spacing:.1em}
+  #centsWrap{width:min(320px,72vw);margin-top:.1rem}
+  #centsTrack{position:relative;height:4px;background:rgba(79,216,196,.14);border-radius:2px}
+  #centsTrack::before{content:"";position:absolute;left:50%;top:-4px;width:1px;height:12px;background:var(--muted)}
+  #centsDot{position:absolute;top:-4px;left:50%;width:12px;height:12px;border-radius:50%;
+    background:var(--aqua);transform:translateX(-50%);transition:left .12s linear, background .3s}
+  #centsLbl{display:flex;justify-content:space-between;font-size:.6rem;color:var(--muted);letter-spacing:.12em;margin-top:6px}
+
+  #dialWrap{position:relative;width:min(230px,56vw);aspect-ratio:1;margin:.2rem 0}
+  #dial{width:100%;height:100%}
+  #dialTxt{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.15rem}
+  #cohNum{font-weight:200;font-size:3.4rem;color:var(--ink);line-height:1}
+  #dialTxt label{font-size:.6rem;letter-spacing:.26em;color:var(--muted);text-transform:uppercase}
+
+  #tiles{display:grid;grid-template-columns:repeat(4,minmax(130px,168px));gap:.7rem;width:auto;max-width:94vw}
+  @media (max-width:720px){ #tiles{grid-template-columns:repeat(2,1fr);width:100%} }
+  .tile{border:1px solid var(--line);border-radius:14px;background:var(--glass);padding:.7rem .85rem;
+    display:flex;flex-direction:column;gap:.12rem;transition:opacity .4s}
+  .tile .tv{font-size:1.18rem;font-weight:300;color:var(--ink)}
+  .tile .tv b{font-weight:300;color:var(--aqua)}
+  .tile .tl{font-size:.58rem;letter-spacing:.18em;color:var(--muted);text-transform:uppercase}
+  .tile .ts{font-size:.62rem;color:var(--muted);opacity:.8;min-height:.9em}
+  #lab.quiet .tile,#lab.quiet #hero,#lab.quiet #centsWrap{opacity:.4}
+
+  #strip{width:min(760px,94vw);height:88px;border:1px solid var(--line);border-radius:14px;background:var(--glass)}
+
+  /* ---------- dock ---------- */
+  #dock{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);display:flex;align-items:center;gap:10px;
+    padding:10px 14px;background:var(--glass);border:1px solid var(--line);border-radius:16px;
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);z-index:20;transition:opacity .4s ease;max-width:96vw}
+  #dock.hide{opacity:0;pointer-events:none}
+  .ic{width:40px;height:40px;border-radius:11px;border:1px solid transparent;background:transparent;color:var(--ink);
+    cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;flex:none}
+  .ic:hover{background:rgba(79,216,196,.1);border-color:var(--line)}
+  .ic.active{color:var(--aqua);border-color:var(--aqua-deep);background:rgba(79,216,196,.08)}
+  .ic svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  .sep{width:1px;height:26px;background:var(--line);flex:none}
+  #droneNote{font-size:.72rem;letter-spacing:.1em;color:var(--muted);min-width:4.2ch;text-align:center}
+  #droneNote.on{color:var(--gold)}
+  .nbtn{width:26px;height:32px;font-size:1rem;color:var(--muted);background:none;border:none;cursor:pointer}
+  .nbtn:hover{color:var(--aqua)}
+  #dEnd{font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);background:none;
+    border:1px solid var(--line);border-radius:10px;padding:.55rem .8rem;cursor:pointer;transition:.15s;flex:none}
+  #dEnd:hover{color:var(--gold);border-color:var(--gold-deep)}
+
+  /* ---------- summary ---------- */
+  #summary{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;
+    background:rgba(2,5,6,.82);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:opacity .4s}
+  #summary.hide{opacity:0;pointer-events:none}
+  #sCard{width:min(680px,92vw);max-height:86vh;overflow-y:auto;background:#071010;border:1px solid var(--line);
+    border-radius:20px;padding:1.6rem 1.7rem;display:flex;flex-direction:column;gap:1rem}
+  #sCard h2{font-weight:300;font-size:1rem;letter-spacing:.3em;text-transform:uppercase;color:var(--aqua-pale)}
+  .sGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.6rem}
+  .sStat{border:1px solid var(--line);border-radius:12px;padding:.6rem .8rem}
+  .sStat .tv{font-size:1.25rem;font-weight:300}
+  .sStat .tl{font-size:.56rem;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;margin-top:.1rem}
+  #sTableWrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:.72rem;min-width:430px}
+  th{font-weight:400;font-size:.58rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
+    text-align:right;padding:.3rem .45rem;border-bottom:1px solid var(--line)}
+  th:first-child,td:first-child{text-align:left}
+  td{padding:.34rem .45rem;text-align:right;color:var(--ink);border-bottom:1px solid rgba(79,216,196,.06)}
+  td b{color:var(--aqua);font-weight:400}
+  #trendWrap{display:flex;flex-direction:column;gap:.3rem}
+  #trendWrap label{font-size:.58rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+  #trend{width:100%;height:56px}
+  #sBtns{display:flex;gap:.7rem;justify-content:flex-end;flex-wrap:wrap}
+  #sNoTones{color:var(--muted);font-size:.78rem;line-height:1.7}
+</style>
+</head>
+<body>
+
+<div id="nav">
+  <a href="index.html" class="home" title="Menu" aria-label="Menu">≡</a>
+  <a href="vox.html" class="active">Vox</a>
+</div>
+
+<div id="veil">
+  <h1>Vox</h1>
+  <p>A vocal toning lab. Sing a steady tone and watch the numbers breathe with you —
+     pitch, breath, clarity, and resonance, measured in real time.</p>
+  <div class="cta"><button class="b solid" id="vMic">Begin — enable microphone</button></div>
+  <p class="priv">Everything runs in your browser. Your voice is never recorded, stored, or uploaded.</p>
+</div>
+
+<main id="lab" class="hide quiet">
+  <div id="hero">
+    <div id="noteBig">—<small id="noteOct"></small></div>
+    <div id="hzTxt">listening…</div>
+  </div>
+  <div id="centsWrap">
+    <div id="centsTrack"><div id="centsDot"></div></div>
+    <div id="centsLbl"><span>−50¢</span><span id="matchTxt"></span><span>+50¢</span></div>
+  </div>
+
+  <div id="dialWrap">
+    <canvas id="dial"></canvas>
+    <div id="dialTxt"><div id="cohNum">—</div><label>coherence</label></div>
+  </div>
+
+  <div id="tiles">
+    <div class="tile"><div class="tv" id="tStab">—</div><div class="tl">Pitch stability</div><div class="ts" id="tStabS"></div></div>
+    <div class="tile"><div class="tv" id="tHnr">—</div><div class="tl">Harmonic clarity</div><div class="ts">HNR</div></div>
+    <div class="tile"><div class="tv" id="tJit">—</div><div class="tl">Jitter</div><div class="ts">pitch micro-tremor</div></div>
+    <div class="tile"><div class="tv" id="tShim">—</div><div class="tl">Shimmer</div><div class="ts">loudness tremor</div></div>
+    <div class="tile"><div class="tv" id="tBright">—</div><div class="tl">Brightness</div><div class="ts">spectral centroid</div></div>
+    <div class="tile"><div class="tv" id="tRich">—</div><div class="tl">Harmonic richness</div><div class="ts" id="tRichS">overtone energy</div></div>
+    <div class="tile"><div class="tv" id="tBreath">—</div><div class="tl">Breath</div><div class="ts">current tone length</div></div>
+    <div class="tile"><div class="tv" id="tRes">—</div><div class="tl">Resonance</div><div class="ts" id="tResS">F1 · F2</div></div>
+  </div>
+
+  <canvas id="strip"></canvas>
+</main>
+
+<div id="dock" class="hide">
+  <button class="ic" id="dMic" title="Microphone on/off" aria-label="Microphone on or off">
+    <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg>
+  </button>
+  <div class="sep"></div>
+  <button class="ic" id="dDrone" title="Reference drone" aria-label="Reference drone on or off">
+    <svg viewBox="0 0 24 24"><path d="M12 3v10"/><path d="M9 3h6"/><circle cx="12" cy="17" r="4"/></svg>
+  </button>
+  <button class="nbtn" id="dNoteDn" aria-label="Drone note down">−</button>
+  <div id="droneNote">A3</div>
+  <button class="nbtn" id="dNoteUp" aria-label="Drone note up">+</button>
+  <div class="sep"></div>
+  <button id="dEnd">End session</button>
+  <button class="ic" id="dFull" title="Fullscreen" aria-label="Fullscreen">
+    <svg viewBox="0 0 24 24"><path d="M4 9V4h5"/><path d="M20 9V4h-5"/><path d="M4 15v5h5"/><path d="M20 15v5h-5"/></svg>
+  </button>
+</div>
+
+<div id="summary" class="hide">
+  <div id="sCard">
+    <h2>Session</h2>
+    <div class="sGrid">
+      <div class="sStat"><div class="tv" id="sCoh">—</div><div class="tl">Avg coherence</div></div>
+      <div class="sStat"><div class="tv" id="sTones">—</div><div class="tl">Tones</div></div>
+      <div class="sStat"><div class="tv" id="sTime">—</div><div class="tl">Time toning</div></div>
+      <div class="sStat"><div class="tv" id="sBest">—</div><div class="tl">Best tone</div></div>
+    </div>
+    <div id="sTableWrap">
+      <table id="sTable">
+        <thead><tr><th>Tone</th><th>Note</th><th>Length</th><th>Coherence</th><th>Stability</th><th>HNR</th><th>Jitter</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p id="sNoTones" hidden>No sustained tones yet — hold a comfortable note for a few seconds and the lab will begin measuring.</p>
+    <div id="trendWrap">
+      <label>Coherence across sessions</label>
+      <canvas id="trend"></canvas>
+    </div>
+    <div id="sBtns">
+      <button class="b" id="sDiscard">Discard</button>
+      <button class="b solid" id="sSave">Save session</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(()=>{
+"use strict";
+const TAU=Math.PI*2;
+const clamp=(v,a,b)=>v<a?a:(v>b?b:v);
+const MOBILE=matchMedia('(pointer:coarse)').matches||(navigator.maxTouchPoints>0&&Math.min(screen.width||1024,screen.height||768)<=820);
+const NOTES=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
+
+/* =====================================================================
+   VOX LISTENING ENGINE — tuned for the singing voice.
+   Pipeline: mic -> high-pass clean -> VAD -> tone segmentation ->
+   F0 tracking (normalized autocorrelation) -> amplitude/breath envelope ->
+   spectral features (centroid, harmonic richness, timbre) ->
+   formant estimation (F1/F2) -> jitter / shimmer / HNR ->
+   vocal coherence score -> biofeedback display + session log.
+   ===================================================================== */
+
+// ---------- audio graph ----------
+let actx=null, analyser=null, hpf=null, srcNode=null, micStream=null;
+let td=null, fd=null, binHz=0, SR=48000;
+let mode='idle';
+
+function ensureCtx(){
+  if(actx) return;
+  actx=new (window.AudioContext||window.webkitAudioContext)();
+  SR=actx.sampleRate;
+  // signal cleaning: high-pass removes room rumble & handling noise below the voice
+  hpf=actx.createBiquadFilter(); hpf.type='highpass'; hpf.frequency.value=70; hpf.Q.value=0.71;
+  analyser=actx.createAnalyser();
+  analyser.fftSize=4096; analyser.smoothingTimeConstant=0.5;
+  hpf.connect(analyser);
+  td=new Float32Array(analyser.fftSize);
+  fd=new Float32Array(analyser.frequencyBinCount);
+  binHz=SR/analyser.fftSize;
+}
+let micPending=false;
+async function useMic(){
+  if(micPending) return;
+  if(mode==='mic'){ stopMic(); return; }
+  micPending=true;
+  const vb=document.getElementById('vMic'), vTxt=vb.textContent;
+  vb.textContent='Connecting…';
+  let stream;
+  try{ stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}}); }
+  catch(e){ micPending=false; vb.textContent=vTxt; alert('Mic unavailable — check browser permissions.'); return; }
+  micPending=false; vb.textContent=vTxt;
+  ensureCtx(); await actx.resume();
+  micStream=stream; mode='mic';
+  srcNode=actx.createMediaStreamSource(micStream); srcNode.connect(hpf);
+  if(!session.start) session.start=Date.now();
+  reveal(); syncUI();
+}
+function stopMic(){
+  if(srcNode){ try{srcNode.disconnect();}catch(e){} srcNode=null; }
+  if(micStream){ micStream.getTracks().forEach(t=>t.stop()); micStream=null; }
+  mode='idle'; endTone(); syncUI();
+}
+
+// ---------- reference drone ----------
+const DRONES=[];   // C2..C6
+for(let m=36;m<=84;m++) DRONES.push(m);
+let droneIdx=DRONES.indexOf(57);          // A3 = midi 57
+let droneOsc=null, droneOsc2=null, droneGain=null, droneOn=false;
+const midiHz=m=>440*Math.pow(2,(m-69)/12);
+const midiName=m=>NOTES[m%12]+(Math.floor(m/12)-1);
+function droneSet(on){
+  ensureCtx(); actx.resume();
+  if(droneOsc){ try{droneOsc.stop();droneOsc2.stop();}catch(e){} droneOsc=droneOsc2=null; }
+  if(droneGain){ try{droneGain.disconnect();}catch(e){} droneGain=null; }
+  droneOn=on;
+  if(on){
+    const f=midiHz(DRONES[droneIdx]);
+    droneGain=actx.createGain(); droneGain.gain.value=0;
+    droneOsc=actx.createOscillator(); droneOsc.frequency.value=f; droneOsc.type='sine';
+    droneOsc2=actx.createOscillator(); droneOsc2.frequency.value=f*2; droneOsc2.type='sine';
+    const g2=actx.createGain(); g2.gain.value=0.18;
+    droneOsc.connect(droneGain); droneOsc2.connect(g2); g2.connect(droneGain);
+    droneGain.connect(actx.destination);
+    droneOsc.start(); droneOsc2.start();
+    droneGain.gain.linearRampToValueAtTime(0.09, actx.currentTime+0.4);   // gentle fade in
+  }
+  syncUI();
+}
+function droneStep(d){
+  droneIdx=clamp(droneIdx+d,0,DRONES.length-1);
+  if(droneOn) droneSet(true); else syncUI();
+}
+
+/* ---------- the engine state ---------- */
+const eng={
+  lvl:0, floor:1e-4,                 // rms level + adaptive noise floor
+  voiced:false, vadHold:0,           // voice activity
+  f0:0, clarity:0,                   // pitch + periodicity confidence
+  midiC:0,                           // continuous midi (fractional)
+  stab:99,                           // rolling pitch std-dev, cents
+  jitter:0, shimmer:0, hnr:0,        // voice quality
+  centroid:0, rich:0,                // brightness + harmonic richness
+  f1:0, f2:0, vowel:'—',             // resonance mapping
+  breath:0,                          // current tone duration, s
+  coh:0, cohShow:0,                  // vocal coherence score
+  prevF0:0, prevRms:0,
+};
+const f0Med=[];                      // median-of-5 anti-octave-glitch
+const pHist=new Float32Array(72);    // ~1.2s of cents history for stability
+let pHistN=0, pHistI=0;
+
+// ---------- F0: normalized autocorrelation with octave guard ----------
+const ACW=2048;
+function trackPitch(){
+  const minLag=Math.floor(SR/800), maxLag=Math.min(Math.floor(SR/70), td.length-ACW-1);
+  let e0=0; for(let i=0;i<ACW;i++) e0+=td[i]*td[i];
+  if(e0<1e-7) return {f0:0,r:0};
+  // sliding window energy
+  let eW=0; for(let i=minLag;i<minLag+ACW;i++) eW+=td[i]*td[i];
+  let bestR=0, rPrev=0, rPrev2=0, bestLag=0;
+  const rArr=new Float32Array(maxLag+1);
+  for(let lag=minLag;lag<=maxLag;lag++){
+    let c=0;
+    for(let i=0;i<ACW;i++) c+=td[i]*td[i+lag];
+    const r=c/Math.sqrt(e0*eW+1e-12);
+    rArr[lag]=r;
+    if(r>bestR){ bestR=r; bestLag=lag; }
+    eW+=td[lag+ACW]*td[lag+ACW]-td[lag]*td[lag];
+  }
+  if(bestR<0.3) return {f0:0,r:bestR};
+  // octave guard: take the FIRST local peak that gets within 88% of the global max
+  let lag=bestLag;
+  for(let L=minLag+1;L<maxLag;L++){
+    if(rArr[L]>=rArr[L-1]&&rArr[L]>=rArr[L+1]&&rArr[L]>=bestR*0.88){ lag=L; break; }
+  }
+  // parabolic refinement
+  const a=rArr[lag-1]||0,b=rArr[lag],c2=rArr[lag+1]||0;
+  const den=a-2*b+c2;
+  const sh=den?clamp(0.5*(a-c2)/den,-0.5,0.5):0;
+  return {f0:SR/(lag+sh), r:rArr[lag]};
+}
+
+// ---------- tone segmentation + session ----------
+const session={start:0, tones:[]};
+let tone=null;
+function beginTone(){
+  tone={t0:performance.now(), n:0, f0s:[], coh:0, stab:0, hnr:0, jit:0, shim:0, rich:0, rms:0};
+}
+function endTone(){
+  if(!tone) return;
+  const dur=(performance.now()-tone.t0)/1000;
+  if(dur>=1.0 && tone.n>=20){
+    const f0s=tone.f0s.slice().sort((x,y)=>x-y);
+    const f0m=f0s[f0s.length>>1];
+    const midi=Math.round(69+12*Math.log2(f0m/440));
+    session.tones.push({
+      dur, f0:f0m, note:midiName(midi),
+      coh:tone.coh/tone.n, stab:tone.stab/tone.n, hnr:tone.hnr/tone.n,
+      jit:tone.jit/tone.n, shim:tone.shim/tone.n, rich:tone.rich/tone.n,
+    });
+  }
+  tone=null;
+}
+
+// ---------- per-frame analysis ----------
+function analyze(){
+  if(!analyser||mode!=='mic') return;
+  analyser.getFloatTimeDomainData(td);
+  analyser.getFloatFrequencyData(fd);
+
+  // amplitude envelope
+  let s=0; for(let i=0;i<td.length;i++) s+=td[i]*td[i];
+  const rms=Math.sqrt(s/td.length);
+  eng.lvl+=(rms-eng.lvl)*0.3;
+
+  // pitch + periodicity
+  const gate=Math.max(eng.floor*3.5, 0.006);
+  let p={f0:0,r:0};
+  if(rms>gate) p=trackPitch();
+
+  // voice activity detection: energy above adaptive floor AND periodic
+  const voicedNow=(rms>gate && p.r>0.60 && p.f0>=70 && p.f0<=800);
+  if(voicedNow) eng.vadHold=14;                 // ~0.25s hangover
+  else if(eng.vadHold>0) eng.vadHold--;
+  const wasVoiced=eng.voiced;
+  eng.voiced=eng.vadHold>0;
+  if(!eng.voiced) eng.floor+=(rms-eng.floor)*0.02;   // learn the noise floor in silence
+
+  // tone segmentation
+  if(eng.voiced&&!wasVoiced) beginTone();
+  if(!eng.voiced&&wasVoiced) endTone();
+
+  if(voicedNow){
+    // median-of-5 F0 smoothing kills octave glitches
+    f0Med.push(p.f0); if(f0Med.length>5) f0Med.shift();
+    const srt=f0Med.slice().sort((a,b)=>a-b);
+    const f0=srt[srt.length>>1];
+    eng.clarity=p.r;
+
+    // jitter: frame-to-frame period perturbation (RAP-like)
+    if(eng.prevF0>0){
+      const jRaw=Math.abs(1/f0-1/eng.prevF0)*f0;
+      eng.jitter+=(clamp(jRaw,0,0.08)-eng.jitter)*0.06;
+    }
+    eng.prevF0=f0;
+    // shimmer: frame-to-frame amplitude perturbation
+    if(eng.prevRms>0){
+      const shRaw=Math.abs(rms-eng.prevRms)/Math.max(rms,eng.prevRms);
+      eng.shimmer+=(clamp(shRaw,0,0.6)-eng.shimmer)*0.06;
+    }
+    eng.prevRms=rms;
+    // HNR from normalized ACF peak (Boersma)
+    const r=clamp(p.r,0.01,0.999);
+    const hnrRaw=10*Math.log10(r/(1-r));
+    eng.hnr+=(clamp(hnrRaw,0,35)-eng.hnr)*0.08;
+
+    eng.f0=f0;
+    eng.midiC=69+12*Math.log2(f0/440);
+    // pitch stability: rolling std-dev in cents over ~1.2s
+    pHist[pHistI]=eng.midiC*100; pHistI=(pHistI+1)%pHist.length; if(pHistN<pHist.length)pHistN++;
+    if(pHistN>18){
+      let m=0; for(let i=0;i<pHistN;i++)m+=pHist[i]; m/=pHistN;
+      let v=0; for(let i=0;i<pHistN;i++){const d=pHist[i]-m;v+=d*d;}
+      eng.stab+=(Math.min(99,Math.sqrt(v/pHistN))-eng.stab)*0.15;
+    }
+
+    // ---- spectral features ----
+    const lin=specLin();
+    // brightness: spectral centroid 80–6000 Hz
+    let num=0,den=0;
+    const i0=Math.max(1,(80/binHz)|0), i1=Math.min(lin.length,(6000/binHz)|0);
+    for(let i=i0;i<i1;i++){ num+=i*binHz*lin[i]; den+=lin[i]; }
+    if(den>0) eng.centroid+=((num/den)-eng.centroid)*0.12;
+    // harmonic richness + timbre profile: overtone energy relative to the fundamental
+    let h1=0, hs=0, nH=0;
+    for(let k=1;k<=10;k++){
+      const f=f0*k; if(f>SR/2-200) break;
+      const b=Math.round(f/binHz);
+      let a=0; for(let d=-1;d<=1;d++) a=Math.max(a,lin[b+d]||0);
+      if(k===1) h1=a; else { hs+=a; if(h1>0&&a>h1*0.02) nH++; }
+    }
+    const richRaw=h1>0?clamp(hs/h1/1.6,0,1):0;
+    eng.rich+=(richRaw-eng.rich)*0.1;
+    eng.nHarm=nH;
+    // formants / resonance mapping: strongest spectral peaks under the vocal envelope
+    const fm=formants(lin,f0);
+    if(fm){ eng.f1+=(fm[0]-eng.f1)*0.15; eng.f2+=(fm[1]-eng.f2)*0.15; eng.vowel=vowelName(eng.f1,eng.f2); }
+
+    // breath: current tone length
+    if(tone) eng.breath=(performance.now()-tone.t0)/1000;
+
+    // ---- vocal coherence score ----
+    const sStab =clamp(1-(eng.stab-3)/45,0,1);            // 3¢ steady -> 48¢ scattered
+    const sClar =clamp((eng.hnr-5)/17,0,1);               // 5 dB -> 22 dB
+    const sSmooth=clamp(1-(eng.jitter/0.012+eng.shimmer/0.10)/2,0,1);
+    const sRich =clamp(eng.rich/0.6,0,1);
+    const sBreath=clamp(eng.breath/8,0,1);
+    eng.coh=100*(0.30*sStab+0.25*sClar+0.20*sSmooth+0.15*sRich+0.10*sBreath);
+    eng.cohShow+=(eng.coh-eng.cohShow)*0.08;
+
+    if(tone){
+      tone.n++; tone.f0s.push(f0);
+      tone.coh+=eng.coh; tone.stab+=eng.stab; tone.hnr+=eng.hnr;
+      tone.jit+=eng.jitter; tone.shim+=eng.shimmer; tone.rich+=eng.rich;
+    }
+  } else {
+    eng.prevF0=0; eng.prevRms=0; f0Med.length=0;
+    if(!eng.voiced){ eng.cohShow*=0.985; eng.breath=0; pHistN=0; pHistI=0; }
+  }
+  if(window.__log) __log.push([performance.now()/1000,eng.voiced?1:0,+eng.f0.toFixed(2),+eng.clarity.toFixed(3),
+    +eng.stab.toFixed(1),+eng.jitter.toFixed(4),+eng.shimmer.toFixed(4),+eng.hnr.toFixed(1),
+    +eng.coh.toFixed(1),Math.round(eng.centroid),Math.round(eng.f1),Math.round(eng.f2),+eng.rich.toFixed(3)]);
+}
+// dB spectrum -> linear magnitude
+let linBuf=null;
+function specLin(){
+  if(!linBuf) linBuf=new Float32Array(fd.length);
+  for(let i=0;i<fd.length;i++) linBuf[i]=Math.pow(10,fd[i]/20);
+  return linBuf;
+}
+// F1/F2: strongest peaks in the classic formant bands (v1: comb-sampled envelope)
+function formants(lin,f0){
+  const find=(lo,hi)=>{
+    let bi=-1,bv=0;
+    const a=Math.max(2,(lo/binHz)|0), b=Math.min(lin.length-2,(hi/binHz)|0);
+    for(let i=a;i<=b;i++){ const v=lin[i-1]+lin[i]*2+lin[i+1]; if(v>bv){bv=v;bi=i;} }
+    return bi>0?bi*binHz:0;
+  };
+  const f1=find(Math.max(220,f0*0.8),1100);
+  if(!f1) return null;
+  const f2=find(Math.max(1250,f1+300),3200);
+  return f2?[f1,f2]:[f1,0];
+}
+const VOWELS=[['ee',280,2250],['ih',400,1900],['eh',550,1770],['ah',710,1150],['aw',590,880],['oh',450,800],['oo',310,880]];
+function vowelName(f1,f2){
+  if(!f1||!f2) return '—';
+  let best='—',bd=1e9;
+  for(const [n,a,b] of VOWELS){
+    const d=Math.pow(Math.log(f1/a),2)+Math.pow(Math.log(f2/b),2);
+    if(d<bd){bd=d;best=n;}
+  }
+  return best;
+}
+
+/* ---------- biofeedback display ---------- */
+const $=id=>document.getElementById(id);
+const lab=$('lab'), dial=$('dial'), dctx=dial.getContext('2d');
+const strip=$('strip'), sctx=strip.getContext('2d');
+const DPR=Math.min(2,window.devicePixelRatio||1);
+const chart={coh:[],f0:[],cap:450};      // ~45s at 10Hz
+let lastPush=0;
+
+function scoreColor(v){
+  if(v<40) return '#8a7cc9';
+  if(v<70) return '#e0b64f';
+  return '#4fd8c4';
+}
+function drawDial(){
+  const w=dial.width,h=dial.height, r=w/2-8*DPR;
+  dctx.clearRect(0,0,w,h);
+  const a0=Math.PI*0.75, a1=Math.PI*2.25;
+  dctx.lineCap='round';
+  dctx.beginPath(); dctx.arc(w/2,h/2,r,a0,a1);
+  dctx.strokeStyle='rgba(79,216,196,.12)'; dctx.lineWidth=7*DPR; dctx.stroke();
+  const v=eng.cohShow/100;
+  if(v>0.01){
+    const col=scoreColor(eng.cohShow);
+    dctx.beginPath(); dctx.arc(w/2,h/2,r,a0,a0+(a1-a0)*v);
+    dctx.strokeStyle=col; dctx.lineWidth=7*DPR; dctx.stroke();
+    dctx.beginPath(); dctx.arc(w/2,h/2,r,a0,a0+(a1-a0)*v);
+    dctx.strokeStyle=col; dctx.globalAlpha=0.25; dctx.lineWidth=14*DPR; dctx.stroke();
+    dctx.globalAlpha=1;
+  }
+}
+function drawStrip(){
+  const w=strip.width,h=strip.height;
+  sctx.clearRect(0,0,w,h);
+  const n=chart.coh.length; if(n<2) return;
+  const dx=w/(chart.cap-1);
+  // f0 trace (faint gold, log 70..800)
+  sctx.fillStyle='rgba(245,197,66,.5)';
+  for(let i=0;i<n;i++){
+    const f=chart.f0[i]; if(!f) continue;
+    const y=h-(Math.log(f/70)/Math.log(800/70))*h;
+    sctx.fillRect(i*dx,y-1,2,2);
+  }
+  // coherence line
+  sctx.beginPath();
+  let started=false;
+  for(let i=0;i<n;i++){
+    const y=h-(chart.coh[i]/100)*(h-8)-4;
+    started?sctx.lineTo(i*dx,y):(sctx.moveTo(i*dx,y),started=true);
+  }
+  sctx.strokeStyle='rgba(79,216,196,.9)'; sctx.lineWidth=1.5*DPR; sctx.stroke();
+}
+
+let lastDraw=0, rafLive=true, domT=0;
+function draw(t){
+  if(document.hidden){ rafLive=false; return; }
+  const gap=(mode!=='mic')?200:(MOBILE?33:16);
+  if(t-lastDraw<gap){ requestAnimationFrame(draw); return; }
+  lastDraw=t;
+  if(t-lastPush>100){
+    lastPush=t;
+    chart.coh.push(eng.voiced?eng.coh:0); chart.f0.push(eng.voiced?eng.f0:0);
+    if(chart.coh.length>chart.cap){ chart.coh.shift(); chart.f0.shift(); }
+  }
+  drawDial(); drawStrip();
+  if(t-domT>125){ domT=t; updateDOM(); }
+  requestAnimationFrame(draw);
+}
+function updateDOM(){
+  lab.classList.toggle('quiet',!eng.voiced);
+  if(eng.voiced&&eng.f0>0){
+    const midi=Math.round(eng.midiC);
+    const cents=Math.round((eng.midiC-midi)*100);
+    $('noteBig').firstChild.textContent=NOTES[((midi%12)+12)%12];
+    $('noteOct').textContent=Math.floor(midi/12)-1;
+    $('hzTxt').textContent=eng.f0.toFixed(1)+' Hz'+(cents ? '  ·  '+(cents>0?'+':'')+cents+'¢' : '  ·  in tune');
+    $('centsDot').style.left=(50+clamp(cents,-50,50))+'%';
+    $('centsDot').style.background=Math.abs(cents)<8?'var(--aqua)':(Math.abs(cents)<25?'var(--gold)':'var(--violet)');
+    if(droneOn){
+      const dm=DRONES[droneIdx];
+      const dc=Math.round((eng.midiC-dm)*100);
+      $('matchTxt').textContent=Math.abs(dc)<=1200?('drone '+(dc>0?'+':'')+dc+'¢'):'';
+    } else $('matchTxt').textContent='';
+    $('cohNum').textContent=Math.round(eng.cohShow);
+    $('cohNum').style.color=scoreColor(eng.cohShow);
+    $('tStab').innerHTML='±<b>'+eng.stab.toFixed(0)+'</b>¢';
+    $('tStabS').textContent=eng.stab<6?'crystal steady':eng.stab<15?'steady':eng.stab<30?'wavering':'searching';
+    $('tHnr').innerHTML='<b>'+eng.hnr.toFixed(0)+'</b> dB';
+    $('tJit').innerHTML='<b>'+(eng.jitter*100).toFixed(2)+'</b>%';
+    $('tShim').innerHTML='<b>'+(eng.shimmer*100).toFixed(1)+'</b>%';
+    $('tBright').innerHTML='<b>'+Math.round(eng.centroid)+'</b> Hz';
+    $('tRich').innerHTML='<b>'+Math.round(clamp(eng.rich/0.6,0,1)*100)+'</b>';
+    $('tRichS').textContent=(eng.nHarm||0)+' overtones sounding';
+    $('tBreath').innerHTML='<b>'+eng.breath.toFixed(1)+'</b> s';
+    $('tRes').innerHTML='<b>'+eng.vowel+'</b>';
+    $('tResS').textContent=eng.f1&&eng.f2?Math.round(eng.f1)+' · '+Math.round(eng.f2)+' Hz':'F1 · F2';
+  } else {
+    $('noteBig').firstChild.textContent='—'; $('noteOct').textContent='';
+    $('hzTxt').textContent=mode==='mic'?'listening…':'mic off';
+    $('matchTxt').textContent='';
+    $('cohNum').textContent=eng.cohShow>1?Math.round(eng.cohShow):'—';
+  }
+}
+
+/* ---------- session summary + trends ---------- */
+const LS='voxSessions';
+function endSession(){
+  endTone(); if(mode==='mic') stopMic();
+  if(droneOn) droneSet(false);
+  const T=session.tones;
+  const avg=k=>T.length?T.reduce((a,t)=>a+t[k],0)/T.length:0;
+  $('sCoh').textContent=T.length?Math.round(avg('coh')):'—';
+  $('sCoh').style.color=T.length?scoreColor(avg('coh')):'';
+  $('sTones').textContent=T.length;
+  const tot=T.reduce((a,t)=>a+t.dur,0);
+  $('sTime').textContent=tot>=60?(tot/60).toFixed(1)+' min':Math.round(tot)+' s';
+  $('sBest').textContent=T.length?Math.round(Math.max(...T.map(t=>t.coh))):'—';
+  const tb=$('sTable').querySelector('tbody'); tb.innerHTML='';
+  $('sTableWrap').hidden=!T.length; $('sNoTones').hidden=!!T.length;
+  T.forEach((t,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML='<td>'+(i+1)+'</td><td>'+t.note+'</td><td>'+t.dur.toFixed(1)+'s</td>'+
+      '<td><b>'+Math.round(t.coh)+'</b></td><td>±'+t.stab.toFixed(0)+'¢</td>'+
+      '<td>'+t.hnr.toFixed(0)+'dB</td><td>'+(t.jit*100).toFixed(2)+'%</td>';
+    tb.appendChild(tr);
+  });
+  drawTrend(readSessions(), T.length?avg('coh'):null);
+  $('summary').classList.remove('hide');
+}
+function readSessions(){ try{ return JSON.parse(localStorage.getItem(LS)||'[]'); }catch(e){ return []; } }
+function drawTrend(hist,current){
+  const c=$('trend'); c.width=c.clientWidth*DPR; c.height=c.clientHeight*DPR;
+  const x=c.getContext('2d'), w=c.width, h=c.height;
+  const pts=hist.map(s=>s.coh); if(current!=null) pts.push(current);
+  x.clearRect(0,0,w,h);
+  if(!pts.length){ x.fillStyle='rgba(111,133,128,.6)'; x.font=(11*DPR)+'px sans-serif';
+    x.fillText('Your first saved session will start the trend line.',8*DPR,h/2); return; }
+  const n=pts.length, dx=n>1?w/(n-1):0;
+  x.beginPath();
+  pts.forEach((v,i)=>{ const y=h-(v/100)*(h-10*DPR)-5*DPR; i?x.lineTo(i*dx,y):x.moveTo(0,y); });
+  if(n>1){ x.strokeStyle='rgba(79,216,196,.8)'; x.lineWidth=1.5*DPR; x.stroke(); }
+  pts.forEach((v,i)=>{
+    const y=h-(v/100)*(h-10*DPR)-5*DPR;
+    x.fillStyle=(i===n-1&&current!=null)?'#ffe9a8':scoreColor(v);
+    x.beginPath(); x.arc(n>1?i*dx:w/2,y,3*DPR,0,TAU); x.fill();
+  });
+}
+function saveSession(){
+  const T=session.tones;
+  if(T.length){
+    const hist=readSessions();
+    const avg=k=>T.reduce((a,t)=>a+t[k],0)/T.length;
+    hist.push({d:new Date().toISOString().slice(0,10), coh:avg('coh'), hnr:avg('hnr'),
+      stab:avg('stab'), secs:Math.round(T.reduce((a,t)=>a+t.dur,0)), tones:T.length});
+    while(hist.length>40) hist.shift();
+    try{ localStorage.setItem(LS,JSON.stringify(hist)); }catch(e){}
+  }
+  closeSummary();
+}
+function closeSummary(){
+  session.tones=[]; session.start=0;
+  chart.coh.length=0; chart.f0.length=0;
+  $('summary').classList.add('hide');
+  lab.classList.add('hide'); dock.classList.add('hide');
+  veil.classList.remove('gone');
+}
+
+/* ---------- wiring ---------- */
+const veil=$('veil'), dock=$('dock');
+function reveal(){ veil.classList.add('gone'); lab.classList.remove('hide'); dock.classList.remove('hide'); }
+function syncUI(){
+  $('dMic').classList.toggle('active',mode==='mic');
+  $('dDrone').classList.toggle('active',droneOn);
+  const dn=$('droneNote'); dn.textContent=midiName(DRONES[droneIdx]); dn.classList.toggle('on',droneOn);
+}
+$('vMic').onclick=useMic;
+$('dMic').onclick=useMic;
+$('dDrone').onclick=()=>droneSet(!droneOn);
+$('dNoteDn').onclick=()=>droneStep(-1);
+$('dNoteUp').onclick=()=>droneStep(1);
+$('dEnd').onclick=endSession;
+$('sSave').onclick=saveSession;
+$('sDiscard').onclick=closeSummary;
+$('dFull').onclick=()=>{ if(!document.fullscreenElement) document.documentElement.requestFullscreen?.(); else document.exitFullscreen?.(); };
+
+function resize(){
+  const dw=$('dialWrap').clientWidth;
+  dial.width=dw*DPR; dial.height=dw*DPR;
+  strip.width=strip.clientWidth*DPR; strip.height=strip.clientHeight*DPR;
+}
+addEventListener('resize',resize);
+['touchend','click'].forEach(ev=>addEventListener(ev,()=>{ if(actx&&actx.state==='suspended') actx.resume(); }));
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden && !rafLive){ rafLive=true; lastDraw=0; requestAnimationFrame(draw); }
+});
+
+function loopFeat(){ analyze(); setTimeout(loopFeat, document.hidden?250:(MOBILE?33:1000/60)); }
+
+// go
+resize(); syncUI(); loopFeat(); requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>
