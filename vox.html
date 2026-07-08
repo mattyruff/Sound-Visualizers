@@ -731,7 +731,8 @@ document.addEventListener('visibilitychange',()=>{
 
 function loopFeat(){ analyze(); setTimeout(loopFeat, document.hidden?250:(MOBILE?33:1000/60)); }
 
-// go
+// go — claim audio focus on arrival so a forgotten gong tab goes quiet immediately
+claimAudio();
 resize(); syncUI(); loopFeat(); requestAnimationFrame(draw);
 })();
 </script>

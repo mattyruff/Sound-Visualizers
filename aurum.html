@@ -156,6 +156,9 @@ function startBuf(){
   bufNode.start(0, pauseOffset % buf.duration);
   startedAt=actx.currentTime; filePlaying=true;
   claimAudio();
+  const n=bufNode;                     // if the pass ends unlooped (hidden tab), rest
+  n.onended=()=>{ if(bufNode===n&&!n.loop){ stopBuf(); syncPlay(); } };
+  if(document.hidden) n.loop=false;
 }
 function stopBuf(){
   if(bufNode){ try{bufNode.stop();}catch(e){} try{bufNode.disconnect();}catch(e){} bufNode=null; }
@@ -426,10 +429,13 @@ function poke(){
 ['mousemove','touchstart','keydown'].forEach(ev=>addEventListener(ev,poke));
 ['touchend','click'].forEach(ev=>addEventListener(ev,()=>{ if(actx&&actx.state==='suspended') actx.resume(); }));
 document.addEventListener('visibilitychange',()=>{
+  // hidden: finish the current pass of the sample, then rest — no endless looping in background tabs
+  if(bufNode) bufNode.loop=!document.hidden;
   if(!document.hidden && !rafLive){ rafLive=true; last=performance.now(); lastDraw=0; requestAnimationFrame(draw); }
 });
 
-// go
+// go — opening this page makes it the sound source: other Resonance tabs go quiet
+claimAudio();
 resize(); loopFeat(); requestAnimationFrame(draw);
 })();
 </script>
