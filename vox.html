@@ -124,6 +124,32 @@
   #trend{width:100%;height:56px}
   #sBtns{display:flex;gap:.7rem;justify-content:flex-end;flex-wrap:wrap}
   #sNoTones{color:var(--muted);font-size:.78rem;line-height:1.7}
+
+  /* ---------- find-your-tone test ---------- */
+  #quiz{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
+    background:rgba(2,5,6,.86);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:opacity .4s}
+  #quiz.hide{opacity:0;pointer-events:none}
+  #qCard{position:relative;width:min(520px,92vw);max-height:88vh;overflow-y:auto;background:#071010;
+    border:1px solid var(--line);border-radius:20px;padding:1.8rem 1.5rem 1.4rem;
+    display:flex;flex-direction:column;gap:.85rem;text-align:center;align-items:center}
+  #qClose{position:absolute;top:10px;right:14px;background:none;border:none;color:var(--muted);
+    font-size:1.25rem;cursor:pointer;line-height:1}
+  #qClose:hover{color:var(--aqua)}
+  #qDots{display:flex;gap:6px}
+  #qDots i{width:6px;height:6px;border-radius:50%;background:rgba(79,216,196,.2);transition:background .3s}
+  #qDots i.on{background:var(--aqua)}
+  #qTitle{font-weight:300;font-size:.95rem;letter-spacing:.24em;text-transform:uppercase;color:var(--aqua-pale)}
+  #qText{color:var(--muted);font-size:.82rem;line-height:1.8;max-width:40ch;min-height:4.4em}
+  #qNote{font-weight:200;font-size:3.2rem;color:var(--aqua-pale);line-height:1;min-height:1em}
+  #qNote small{font-size:45%;color:var(--muted)}
+  #qSub{color:var(--muted);font-size:.72rem;letter-spacing:.1em;min-height:1.1em}
+  .qchips{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center}
+  .qchip{border:1px solid var(--line);border-radius:999px;padding:.4rem .85rem;font-size:.74rem;color:var(--ink)}
+  .qchip b{color:var(--aqua);font-weight:400}
+  .qchip.best{border-color:var(--aqua-deep);background:rgba(79,216,196,.08)}
+  #qBar{width:70%;height:3px;background:rgba(79,216,196,.14);border-radius:2px;overflow:hidden}
+  #qBar i{display:block;height:100%;width:0;background:var(--aqua)}
+  #qBtns{display:flex;gap:.7rem;margin-top:.15rem}
 </style>
 </head>
 <body>
@@ -137,7 +163,10 @@
   <h1>Vox</h1>
   <p>A vocal toning lab. Sing a steady tone and watch the numbers breathe with you —
      pitch, breath, clarity, and resonance, measured in real time.</p>
-  <div class="cta"><button class="b solid" id="vMic">Begin — enable microphone</button></div>
+  <div class="cta" style="display:flex;gap:.7rem;flex-wrap:wrap;justify-content:center">
+    <button class="b solid" id="vQuiz">Find your tone</button>
+    <button class="b" id="vMic">Straight to the lab</button>
+  </div>
   <p class="priv">Everything runs in your browser. Your voice is never recorded, stored, or uploaded.</p>
 </div>
 
@@ -183,10 +212,30 @@
   <button class="nbtn" id="dNoteUp" aria-label="Drone note up">+</button>
   <button id="dTune" title="Concert pitch — tap to switch">A=432</button>
   <div class="sep"></div>
+  <button class="ic" id="dQuiz" title="Find your tone" aria-label="Find your tone">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.6"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3"/></svg>
+  </button>
   <button id="dEnd">End session</button>
   <button class="ic" id="dFull" title="Fullscreen" aria-label="Fullscreen">
     <svg viewBox="0 0 24 24"><path d="M4 9V4h5"/><path d="M20 9V4h-5"/><path d="M4 15v5h5"/><path d="M20 15v5h-5"/></svg>
   </button>
+</div>
+
+<div id="quiz" class="hide">
+  <div id="qCard">
+    <button id="qClose" aria-label="Close">×</button>
+    <div id="qDots"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <h2 id="qTitle">Find your tone</h2>
+    <p id="qText"></p>
+    <div id="qNote">—</div>
+    <div id="qSub"></div>
+    <div class="qchips" id="qChips" hidden></div>
+    <div id="qBar"><i id="qFill"></i></div>
+    <div id="qBtns">
+      <button class="b" id="qSkip">Skip</button>
+      <button class="b solid" id="qNext">Next</button>
+    </div>
+  </div>
 </div>
 
 <div id="summary" class="hide">
@@ -227,6 +276,10 @@ const NOTES=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
 // concert pitch: A4 = 432 Hz by default (toggleable to 440)
 let tuneA=432;
 try{ if(parseInt(localStorage.getItem('voxTuneA'))===440) tuneA=440; }catch(e){}
+
+// the user's home toning note, found by the tone test (midi number)
+let homeNote=0;
+try{ const h=parseInt(localStorage.getItem('voxHomeNote')); if(h>=36&&h<=84) homeNote=h; }catch(e){}
 
 // cross-tab audio focus: starting sound in any Resonance tab quiets the others
 const bc=('BroadcastChannel' in window)?new BroadcastChannel('resonance-audio'):null;
@@ -287,7 +340,7 @@ function stopMic(){
 // ---------- reference drone ----------
 const DRONES=[];   // C2..C6
 for(let m=36;m<=84;m++) DRONES.push(m);
-let droneIdx=DRONES.indexOf(57);          // A3 = midi 57
+let droneIdx=(homeNote||57)-36;           // your found note, else A3 (midi 57)
 let droneOsc=null, droneOsc2=null, droneGain=null, droneOn=false;
 const midiHz=m=>tuneA*Math.pow(2,(m-69)/12);
 const midiName=m=>NOTES[m%12]+(Math.floor(m/12)-1);
@@ -491,6 +544,7 @@ function analyze(){
     eng.prevF0=0; eng.prevRms=0; f0Med.length=0;
     if(!eng.voiced){ eng.cohShow*=0.985; eng.breath=0; pHistN=0; pHistI=0; }
   }
+  if(quiz.active) quizTick();
   if(window.__log) __log.push([performance.now()/1000,eng.voiced?1:0,+eng.f0.toFixed(2),+eng.clarity.toFixed(3),
     +eng.stab.toFixed(1),+eng.jitter.toFixed(4),+eng.shimmer.toFixed(4),+eng.hnr.toFixed(1),
     +eng.coh.toFixed(1),Math.round(eng.centroid),Math.round(eng.f1),Math.round(eng.f2),+eng.rich.toFixed(3)]);
@@ -692,6 +746,145 @@ function closeSummary(){
   veil.classList.remove('gone');
 }
 
+/* ---------- find-your-tone guided test ----------
+   1 warm-up hum (tutorial) -> 2 slide to lowest easy note -> 3 slide to highest
+   comfortable note -> 4-6 tone along a drone at three candidate notes from the
+   lower-middle of the measured range, scored by mean coherence -> result. */
+const QSTEPS=['warmup','low','high','hold','hold','hold'];
+const QCOPY={
+  warmup:['First, just hum','Any note, gently — like a sigh with the lips closed. Watch Vox name it. This is the note readout you will tone with.'],
+  low:['Slide down','Step your hum downward to the lowest note that still feels easy — no pushing, no growl. Rest there a moment, then go quiet.'],
+  high:['Slide up','Now drift upward to the highest note that is still comfortable — stop before it becomes effort. Rest there, then go quiet.'],
+};
+const quiz={active:false,step:-1,buf:[],voicedMs:0,silentMs:0,lastT:0,doneMs:0,uiT:0,
+  low:0,high:0,cands:[],ci:0,hold:null,scores:[]};
+
+function quizStart(){
+  quiz.active=true; quiz.scores=[]; quiz.ci=0; quiz.low=0; quiz.high=0;
+  if(droneOn) droneSet(false);
+  $('quiz').classList.remove('hide');
+  qGo(0);
+}
+function quizEnd(){
+  quiz.active=false; quiz.step=-1;
+  if(droneOn) droneSet(false);
+  $('quiz').classList.add('hide');
+}
+function qGo(i){
+  quiz.step=i; quiz.buf=[]; quiz.voicedMs=0; quiz.silentMs=0; quiz.doneMs=0; quiz.lastT=performance.now();
+  [...$('qDots').children].forEach((d,k)=>d.classList.toggle('on',k<=i));
+  $('qChips').hidden=true; $('qFill').style.width='0';
+  $('qSkip').textContent='Skip'; $('qNext').textContent='Next';
+  const name=QSTEPS[i];
+  if(name==='hold'){
+    const m=quiz.cands[quiz.ci];
+    $('qTitle').textContent='Tone with the drone — '+(quiz.ci+1)+' of '+quiz.cands.length;
+    $('qText').textContent='One steady, easy note along with the drone ('+midiName(m)+'). Fill the breath, keep it soft — Vox is scoring how naturally your voice settles here.';
+    quiz.hold={m, coh:0, n:0, pitch:[], t0:performance.now(), retried:false};
+    droneIdx=m-36; droneSet(true);
+  } else {
+    $('qTitle').textContent=QCOPY[name][0];
+    $('qText').textContent=QCOPY[name][1];
+  }
+}
+function quizTick(){
+  const name=QSTEPS[quiz.step];
+  if(!name) return;                                     // result screen: static
+  const now=performance.now(), dt=Math.min(200,now-quiz.lastT); quiz.lastT=now;
+  const singing=eng.voiced&&eng.f0>0;
+  if(singing){ quiz.voicedMs+=dt; quiz.silentMs=0; } else quiz.silentMs+=dt;
+  if(now-quiz.uiT>120){
+    quiz.uiT=now;
+    if(singing){
+      const midi=Math.round(eng.midiC);
+      $('qNote').innerHTML=NOTES[((midi%12)+12)%12]+'<small>'+(Math.floor(midi/12)-1)+'</small>';
+      $('qSub').textContent=eng.f0.toFixed(1)+' Hz';
+    } else {
+      $('qNote').textContent='—';
+      $('qSub').textContent=name==='hold'?'ease onto the drone’s pitch':'…';
+    }
+  }
+  if(name==='warmup'){
+    $('qFill').style.width=Math.min(100,quiz.voicedMs/1500*100)+'%';
+    if(quiz.voicedMs>=1500){ quiz.doneMs+=dt; if(quiz.doneMs>500) qGo(1); }
+  } else if(name==='low'||name==='high'){
+    if(singing&&eng.clarity>0.6) quiz.buf.push(eng.midiC);
+    $('qFill').style.width=Math.min(100,quiz.voicedMs/2000*100)+'%';
+    if(quiz.voicedMs>=2000&&quiz.silentMs>=900) qAdvanceRange();
+  } else if(name==='hold'){
+    const el=now-quiz.hold.t0;
+    if(el>1200&&singing){ quiz.hold.coh+=eng.coh; quiz.hold.n++; quiz.hold.pitch.push(eng.midiC); }
+    $('qFill').style.width=Math.min(100,el/8000*100)+'%';
+    if(el>=8000) qHoldDone();
+  }
+}
+function quantile(a,q){ if(!a.length) return 0; const s=a.slice().sort((x,y)=>x-y); return s[Math.min(s.length-1,Math.floor(q*s.length))]; }
+function qAdvanceRange(){
+  if(QSTEPS[quiz.step]==='low'){
+    quiz.low=quiz.buf.length>=25?quantile(quiz.buf,0.08):0;
+    qGo(2);
+  } else {
+    quiz.high=quiz.buf.length>=25?quantile(quiz.buf,0.92):0;
+    qCandidates();
+    qGo(3);
+  }
+}
+function qCandidates(){
+  let lo=Math.round(quiz.low), hi=Math.round(quiz.high);
+  if(!lo&&!hi){ lo=48; hi=67; }                        // nothing usable: assume ~C3–G4
+  if(!lo) lo=hi-16;
+  if(!hi) hi=lo+16;
+  if(hi-lo<6){ const m=Math.round((lo+hi)/2); lo=m-4; hi=m+4; }
+  const r=hi-lo, cands=[];
+  [0.18,0.35,0.52].forEach(f=>{                        // lower-middle of the range
+    let m=clamp(lo+Math.round(r*f), lo+1, hi-2);
+    while(cands.includes(m)) m++;
+    cands.push(clamp(m,36,84));
+  });
+  quiz.cands=cands;
+}
+function qHoldDone(){
+  const h=quiz.hold, med=quantile(h.pitch,0.5);
+  const ok=h.n>=60&&Math.abs(med-h.m)<=2;              // sang enough, near the target
+  if(!ok&&!h.retried){
+    h.retried=true; h.coh=0; h.n=0; h.pitch=[]; h.t0=performance.now();
+    $('qText').textContent='Almost — let’s take that one once more. Ease onto the drone’s pitch ('+midiName(h.m)+') and hold it softly.';
+    return;
+  }
+  quiz.scores.push({m:h.m, coh:h.n?h.coh/h.n:0});
+  quiz.ci++;
+  if(quiz.ci<quiz.cands.length) qGo(quiz.step+1);
+  else qResult();
+}
+function qResult(){
+  droneSet(false);
+  quiz.step=9;                                          // parked on the result screen
+  const sc=quiz.scores.slice().sort((a,b)=>b.coh-a.coh);
+  const best=sc[0];
+  homeNote=best.m; droneIdx=homeNote-36;
+  try{
+    localStorage.setItem('voxHomeNote',homeNote);
+    if(quiz.low&&quiz.high) localStorage.setItem('voxRange',Math.round(quiz.low)+','+Math.round(quiz.high));
+  }catch(e){}
+  [...$('qDots').children].forEach(d=>d.classList.add('on'));
+  const lo=Math.round(quiz.low), hi=Math.round(quiz.high);
+  $('qTitle').textContent='Your tone: '+midiName(best.m);
+  $('qText').textContent=(lo&&hi?'Your comfortable range spans '+midiName(lo)+' to '+midiName(hi)+' — about '+((hi-lo)/12).toFixed(1)+' octaves. ':'')+
+    'Your voice settled most naturally at '+midiName(best.m)+' ('+midiHz(best.m).toFixed(1)+' Hz), low in your range, where toning resonates without strain. The drone now starts there.';
+  $('qNote').innerHTML=NOTES[best.m%12]+'<small>'+(Math.floor(best.m/12)-1)+'</small>';
+  $('qSub').textContent='';
+  const ch=$('qChips'); ch.hidden=false; ch.innerHTML='';
+  sc.forEach((s,i)=>{
+    const d=document.createElement('div');
+    d.className='qchip'+(i===0?' best':'');
+    d.innerHTML=midiName(s.m)+' <b>'+Math.round(s.coh)+'</b>';
+    ch.appendChild(d);
+  });
+  $('qFill').style.width='100%';
+  $('qSkip').textContent='Redo test'; $('qNext').textContent='Begin toning';
+  syncUI(); veilRefresh();
+}
+
 /* ---------- wiring ---------- */
 const veil=$('veil'), dock=$('dock');
 function reveal(){ veil.classList.add('gone'); lab.classList.remove('hide'); dock.classList.remove('hide'); }
@@ -707,6 +900,32 @@ function tuneToggle(){
   if(droneOn) droneSet(true);          // re-pitch a sounding drone immediately
   syncUI();
 }
+function veilRefresh(){
+  const vq=$('vQuiz'), vm=$('vMic');
+  if(homeNote){
+    vm.classList.add('solid'); vq.classList.remove('solid');
+    vm.textContent='Begin — your note: '+midiName(homeNote);
+    vq.textContent='Retake the tone test';
+  } else {
+    vq.classList.add('solid'); vm.classList.remove('solid');
+    vq.textContent='Find your tone'; vm.textContent='Straight to the lab';
+  }
+}
+async function quizEntry(){
+  if(mode!=='mic') await useMic();
+  if(mode==='mic') quizStart();
+}
+$('vQuiz').onclick=quizEntry;
+$('dQuiz').onclick=quizEntry;
+$('qClose').onclick=quizEnd;
+$('qSkip').onclick=()=>{ if(quiz.step>8) quizStart(); else quizEnd(); };
+$('qNext').onclick=()=>{
+  if(quiz.step>8){ quizEnd(); return; }
+  const name=QSTEPS[quiz.step];
+  if(name==='warmup') qGo(1);
+  else if(name==='low'||name==='high') qAdvanceRange();
+  else if(name==='hold') quiz.hold.t0-=9000;      // force-finish this candidate
+};
 $('vMic').onclick=useMic;
 $('dMic').onclick=useMic;
 $('dDrone').onclick=()=>droneSet(!droneOn);
@@ -733,6 +952,7 @@ function loopFeat(){ analyze(); setTimeout(loopFeat, document.hidden?250:(MOBILE
 
 // go — claim audio focus on arrival so a forgotten gong tab goes quiet immediately
 claimAudio();
+veilRefresh();
 resize(); syncUI(); loopFeat(); requestAnimationFrame(draw);
 })();
 </script>
