@@ -135,6 +135,11 @@ let freqBytes=null, timeBytes=null, prevFreq=null, binHz=0;
 let buf=null, bufNode=null, filePlaying=false, pauseOffset=0, startedAt=0;
 let mode='idle';
 
+// cross-tab audio focus: starting sound in any Resonance tab quiets the others
+const bc=('BroadcastChannel' in window)?new BroadcastChannel('resonance-audio'):null;
+if(bc) bc.onmessage=e=>{ if(e.data==='claim'){ if(mode==='mic') stopMic(); else if(filePlaying){ stopBuf(); syncPlay(); } } };
+const claimAudio=()=>{ if(bc){ try{bc.postMessage('claim');}catch(e){} } };
+
 function ensureCtx(){
   if(actx) return;
   actx=new (window.AudioContext||window.webkitAudioContext)();
@@ -151,6 +156,7 @@ function startBuf(){
   bufNode.connect(analyser); analyser.connect(actx.destination);
   bufNode.start(0, pauseOffset % buf.duration);
   startedAt=actx.currentTime; filePlaying=true;
+  claimAudio();
 }
 function stopBuf(){
   if(bufNode){ try{bufNode.stop();}catch(e){} try{bufNode.disconnect();}catch(e){} bufNode=null; }
@@ -191,6 +197,7 @@ async function useMic(){
   ensureCtx(); await actx.resume(); disconnectSrc();
   micStream=stream; mode='mic';
   srcNode=actx.createMediaStreamSource(micStream); srcNode.connect(analyser);
+  claimAudio();
   reveal(); syncPlay();
 }
 async function useSample(){

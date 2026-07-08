@@ -94,6 +94,9 @@
   #droneNote.on{color:var(--gold)}
   .nbtn{width:26px;height:32px;font-size:1rem;color:var(--muted);background:none;border:none;cursor:pointer}
   .nbtn:hover{color:var(--aqua)}
+  #dTune{font-size:.6rem;letter-spacing:.08em;color:var(--muted);background:none;border:1px solid var(--line);
+    border-radius:8px;padding:.34rem .5rem;cursor:pointer;transition:.15s;flex:none}
+  #dTune:hover{color:var(--aqua)}
   #dEnd{font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);background:none;
     border:1px solid var(--line);border-radius:10px;padding:.55rem .8rem;cursor:pointer;transition:.15s;flex:none}
   #dEnd:hover{color:var(--gold);border-color:var(--gold-deep)}
@@ -178,6 +181,7 @@
   <button class="nbtn" id="dNoteDn" aria-label="Drone note down">−</button>
   <div id="droneNote">A3</div>
   <button class="nbtn" id="dNoteUp" aria-label="Drone note up">+</button>
+  <button id="dTune" title="Concert pitch — tap to switch">A=432</button>
   <div class="sep"></div>
   <button id="dEnd">End session</button>
   <button class="ic" id="dFull" title="Fullscreen" aria-label="Fullscreen">
@@ -219,6 +223,15 @@ const TAU=Math.PI*2;
 const clamp=(v,a,b)=>v<a?a:(v>b?b:v);
 const MOBILE=matchMedia('(pointer:coarse)').matches||(navigator.maxTouchPoints>0&&Math.min(screen.width||1024,screen.height||768)<=820);
 const NOTES=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
+
+// concert pitch: A4 = 432 Hz by default (toggleable to 440)
+let tuneA=432;
+try{ if(parseInt(localStorage.getItem('voxTuneA'))===440) tuneA=440; }catch(e){}
+
+// cross-tab audio focus: starting sound in any Resonance tab quiets the others
+const bc=('BroadcastChannel' in window)?new BroadcastChannel('resonance-audio'):null;
+if(bc) bc.onmessage=e=>{ if(e.data==='claim'){ if(mode==='mic') stopMic(); if(droneOn) droneSet(false); } };
+const claimAudio=()=>{ if(bc){ try{bc.postMessage('claim');}catch(e){} } };
 
 /* =====================================================================
    VOX LISTENING ENGINE — tuned for the singing voice.
@@ -262,6 +275,7 @@ async function useMic(){
   micStream=stream; mode='mic';
   srcNode=actx.createMediaStreamSource(micStream); srcNode.connect(hpf);
   if(!session.start) session.start=Date.now();
+  claimAudio();
   reveal(); syncUI();
 }
 function stopMic(){
@@ -275,7 +289,7 @@ const DRONES=[];   // C2..C6
 for(let m=36;m<=84;m++) DRONES.push(m);
 let droneIdx=DRONES.indexOf(57);          // A3 = midi 57
 let droneOsc=null, droneOsc2=null, droneGain=null, droneOn=false;
-const midiHz=m=>440*Math.pow(2,(m-69)/12);
+const midiHz=m=>tuneA*Math.pow(2,(m-69)/12);
 const midiName=m=>NOTES[m%12]+(Math.floor(m/12)-1);
 function droneSet(on){
   ensureCtx(); actx.resume();
@@ -292,6 +306,7 @@ function droneSet(on){
     droneGain.connect(actx.destination);
     droneOsc.start(); droneOsc2.start();
     droneGain.gain.linearRampToValueAtTime(0.09, actx.currentTime+0.4);   // gentle fade in
+    claimAudio();
   }
   syncUI();
 }
@@ -424,7 +439,7 @@ function analyze(){
     eng.hnr+=(clamp(hnrRaw,0,35)-eng.hnr)*0.08;
 
     eng.f0=f0;
-    eng.midiC=69+12*Math.log2(f0/440);
+    eng.midiC=69+12*Math.log2(f0/tuneA);
     // pitch stability: rolling std-dev in cents over ~1.2s
     pHist[pHistI]=eng.midiC*100; pHistI=(pHistI+1)%pHist.length; if(pHistN<pHist.length)pHistN++;
     if(pHistN>18){
@@ -684,12 +699,20 @@ function syncUI(){
   $('dMic').classList.toggle('active',mode==='mic');
   $('dDrone').classList.toggle('active',droneOn);
   const dn=$('droneNote'); dn.textContent=midiName(DRONES[droneIdx]); dn.classList.toggle('on',droneOn);
+  $('dTune').textContent='A='+tuneA;
+}
+function tuneToggle(){
+  tuneA=tuneA===432?440:432;
+  try{ localStorage.setItem('voxTuneA',tuneA); }catch(e){}
+  if(droneOn) droneSet(true);          // re-pitch a sounding drone immediately
+  syncUI();
 }
 $('vMic').onclick=useMic;
 $('dMic').onclick=useMic;
 $('dDrone').onclick=()=>droneSet(!droneOn);
 $('dNoteDn').onclick=()=>droneStep(-1);
 $('dNoteUp').onclick=()=>droneStep(1);
+$('dTune').onclick=tuneToggle;
 $('dEnd').onclick=endSession;
 $('sSave').onclick=saveSession;
 $('sDiscard').onclick=closeSummary;
