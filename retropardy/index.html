@@ -2,124 +2,28 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-<meta name="theme-color" content="#060ce9">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Retropardy">
-<title>RETROPARDY! &mdash; 1985&ndash;1995</title>
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
-<link rel="stylesheet" href="css/style.css">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='14' fill='%23060ce9'/><text x='50' y='72' font-size='62' text-anchor='middle' font-family='Impact' fill='%23ffcc4d'>R!</text></svg>">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RETROPARDY! has moved</title>
+<link rel="canonical" href="https://mattyruff.github.io/jeopardy-retro/">
+<meta http-equiv="refresh" content="0; url=https://mattyruff.github.io/jeopardy-retro/">
+<style>
+  html,body{height:100%;margin:0;background:#04053a;color:#dfe2f2;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;-webkit-font-smoothing:antialiased}
+  main{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.2rem;
+    text-align:center;padding:0 8vw}
+  h1{font-weight:600;font-size:1.5rem;letter-spacing:.24em;text-transform:uppercase;color:#ffd75e}
+  p{color:#8a8fb8;font-size:.9rem;letter-spacing:.04em;line-height:1.8;max-width:34ch}
+  a{color:#04053a;background:#ffd75e;text-decoration:none;font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;
+    padding:.66rem 1.5rem;border-radius:999px;transition:.18s;font-weight:600}
+  a:hover{background:#ffe9a8}
+</style>
 </head>
 <body>
-
-<!-- ══════════ SPLASH ══════════ -->
-<section id="splash" class="screen">
-  <div class="splash-grid"></div>
-  <div class="splash-inner">
-    <div class="splash-kicker">DIRECT FROM THE VIDEO VAULT</div>
-    <h1 class="logo">RETRO<span>PARDY!</span></h1>
-    <div class="splash-years">&#9733; 1985 &ndash; 1995 &#9733;</div>
-    <p class="splash-tag">Movies &middot; Music &middot; Video Games &middot; World Events &middot; Cars &middot; Snacks &amp; more</p>
-
-    <div class="player-pick">
-      <div class="pick-label">CONTESTANTS</div>
-      <div class="pick-btns">
-        <button class="pick-btn selected" data-n="1">1</button>
-        <button class="pick-btn" data-n="2">2</button>
-        <button class="pick-btn" data-n="3">3</button>
-      </div>
-    </div>
-
-    <button id="start-btn" class="big-btn">START THE GAME</button>
-    <div class="splash-foot">
-      <span id="bank-count"></span>
-      <button id="reset-seen" class="link-btn" title="Forget which questions you've already been asked">reset question history</button>
-    </div>
-  </div>
-</section>
-
-<!-- ══════════ GAME ══════════ -->
-<section id="game" class="screen hidden">
-  <header id="topbar">
-    <div class="topbar-logo">RETRO<span>PARDY!</span></div>
-    <div id="round-label">ROUND 1</div>
-    <button id="mute-btn" title="Sound on/off">&#128266;</button>
-  </header>
-
-  <div id="board"></div>
-
-  <footer id="scorebar"></footer>
-</section>
-
-<!-- ══════════ CLUE OVERLAY ══════════ -->
-<section id="clue" class="screen hidden">
-  <div class="clue-inner">
-    <div class="clue-head">
-      <span id="clue-cat"></span>
-      <span id="clue-value"></span>
-    </div>
-    <div id="dd-flash" class="hidden">DAILY&nbsp;DOUBLE!</div>
-    <div id="clue-player" class="clue-player"></div>
-    <p id="clue-q"></p>
-    <div id="clue-answers"></div>
-    <div id="timer"><div id="timer-fill"></div></div>
-    <div id="verdict" class="hidden">
-      <div id="verdict-text"></div>
-      <button id="continue-btn" class="big-btn small">CONTINUE</button>
-    </div>
-  </div>
-</section>
-
-<!-- ══════════ WAGER (FINAL) ══════════ -->
-<section id="wager" class="screen hidden">
-  <div class="clue-inner">
-    <div class="final-title">FINAL RETROPARDY!</div>
-    <div id="wager-cat" class="final-cat"></div>
-    <div id="wager-player" class="clue-player"></div>
-    <div class="wager-row">
-      <input type="range" id="wager-slider" min="0" max="1000" step="100" value="0">
-      <div id="wager-amt">$0</div>
-    </div>
-    <button id="wager-btn" class="big-btn small">LOCK IT IN</button>
-  </div>
-</section>
-
-<!-- ══════════ RESULTS ══════════ -->
-<section id="results" class="screen hidden">
-  <div class="splash-grid"></div>
-  <div class="splash-inner">
-    <div class="splash-kicker">FINAL SCORES</div>
-    <h1 class="logo small-logo">THAT'S A WRAP</h1>
-    <div id="podium"></div>
-    <div id="fun-fact" class="fun-fact"></div>
-    <button id="again-btn" class="big-btn">PLAY AGAIN</button>
-  </div>
-</section>
-
-<div id="scanlines"></div>
-
-<!-- question banks — plain JS files so everything works from file:// with no server -->
-<script src="js/data/movies.js"></script>
-<script src="js/data/tv.js"></script>
-<script src="js/data/music.js"></script>
-<script src="js/data/games.js"></script>
-<script src="js/data/sports.js"></script>
-<script src="js/data/world.js"></script>
-<script src="js/data/food.js"></script>
-<script src="js/data/cars.js"></script>
-<script src="js/data/tech.js"></script>
-<script src="js/data/fads.js"></script>
-<script src="js/game.js"></script>
-<script>
-// Installable-app support: service workers need http(s), so this is a no-op
-// when the game is opened straight from the filesystem (which works fine too).
-if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
-  navigator.serviceWorker.register("sw.js").catch(function () {});
-}
-</script>
+<main>
+  <h1>Retropardy!</h1>
+  <p>The game has moved to its own home. Taking you there now…</p>
+  <a href="https://mattyruff.github.io/jeopardy-retro/">Play Retropardy →</a>
+</main>
+<script>location.replace('https://mattyruff.github.io/jeopardy-retro/');</script>
 </body>
 </html>
